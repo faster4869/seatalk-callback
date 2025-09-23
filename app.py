@@ -1,5 +1,4 @@
 import hashlib
-import hmac
 import json
 from typing import Dict, Any
 
@@ -26,7 +25,7 @@ app = Flask(__name__)
 
 def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bool:
     """
-    Validates the signature of the incoming request using HMAC-SHA256.
+    Validates the signature of the incoming request using SHA256.
     
     Args:
         signing_secret: The bot's signing secret as bytes.
@@ -36,10 +35,10 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     Returns:
         True if the signature is valid, False otherwise.
     """
-    # Use hmac.new with SHA256 as required by the Seatalk documentation.
-    # The signature must be calculated on the raw body, not the JSON object.
-    calculated_signature = hmac.new(signing_secret, body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(calculated_signature, signature)
+    # Use the SHA256 algorithm as specified by the Seatalk documentation.
+    # The signature must be calculated on the raw body + signing secret.
+    calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
+    return calculated_signature == signature
 
 
 @app.route("/", methods=["GET"])
@@ -59,15 +58,11 @@ def bot_callback_handler():
     and returns an appropriate response.
     """
     body: bytes = request.get_data()
-    signature: str = request.headers.get("signature")
+    # Safely get the signature and strip any potential leading/trailing whitespace.
+    signature: str = request.headers.get("signature", "").strip()
 
     # 1. Validate the signature for security.
-    # We will print the signatures for debugging purposes.
-    calculated_signature = hmac.new(SIGNING_SECRET, body, hashlib.sha256).hexdigest()
-    print(f"Received Signature: {signature}")
-    print(f"Calculated Signature: {calculated_signature}")
-
-    if not signature or not hmac.compare_digest(calculated_signature, signature):
+    if not signature or not is_valid_signature(SIGNING_SECRET, body, signature):
         # Return a 403 Forbidden status for invalid signatures.
         return "Invalid signature", 403
         
