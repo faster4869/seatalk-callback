@@ -7,7 +7,7 @@ from flask import Flask, request
 
 
 # settings
-SIGNING_SECRET = b"DBJFu8MhySlaPkLgIvR0QGmfR2JfBVQ3"
+SIGNING_SECRET = b"UNy9rAE6vIWUKDcBPQybQ5k6Au_RlHXj"
 
 
 # event list
