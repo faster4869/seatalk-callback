@@ -23,6 +23,16 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
 
 @app.route("/bot-callback", methods=["POST"])
 def bot_callback_handler():
+
+    data: Dict[str, Any] = request.get_json()
+
+    event_type: str = data.get("event_type", "")
+
+    # 先處理驗證事件
+    if event_type == EVENT_VERIFICATION:
+        challenge = data.get("event", {}).get("seatalk_challenge", "")
+        return challenge, 200
+        
     body: bytes = request.get_data()
     signature: str = request.headers.get("signature")
 
