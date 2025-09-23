@@ -16,7 +16,7 @@ EVENT_VERIFICATION = "event_verification"
 NEW_BOT_SUBSCRIBER = "new_bot_subscriber"
 MESSAGE_FROM_BOT_SUBSCRIBER = "message_from_bot_subscriber"
 INTERACTIVE_MESSAGE_CLICK = "interactive_message_click"
-BOT_ADDED_TO_GROUP_CHAT = ”bot_added_to_group_chat"
+BOT_ADDED_TO_GROUP_CHAT = "bot_added_to_group_chat"
 BOT_REMOVED_FROM_GROUP_CHAT = "bot_removed_from_group_chat"
 NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT = "new_mentioned_message_received_from_group_chat"
 
