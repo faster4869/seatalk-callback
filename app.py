@@ -75,9 +75,14 @@ def bot_callback_handler():
         # Log the event type for debugging purposes.
         print(f"Received event type: {event_type}")
 
+        # The verification request sends a 'seatalk_challenge' parameter directly.
+        seatalk_challenge = data.get("seatalk_challenge")
+        if seatalk_challenge:
+            print("Received seatalk_challenge for verification.")
+            return seatalk_challenge
+            
         if event_type == EVENT_VERIFICATION:
             # For event verification, return the 'event' field from the payload as a plain text string.
-            # This corrects the previous assumption that the key was 'challenge'.
             event_data = data.get("event")
             if event_data:
                 return event_data
