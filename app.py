@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 # settings
 # WARNING: DO NOT hardcode your signing secret in a production environment.
 # Instead, load it from a secure environment variable.
+# 🚨 IMPORTANT: This has been updated with your new signing secret.
 SIGNING_SECRET = b"fkA9mPypKMTPUmb2LLMzNGSGDLmOWP6i"
 
 # event list
@@ -41,6 +42,14 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     return hmac.compare_digest(calculated_signature, signature)
 
 
+@app.route("/", methods=["GET"])
+def home():
+    """
+    A simple home page to confirm the app is running.
+    """
+    return "Seatalk Bot Callback Handler is running. Please use the /bot-callback endpoint for POST requests."
+
+
 @app.route("/bot-callback", methods=["POST"])
 def bot_callback_handler():
     """
@@ -67,8 +76,8 @@ def bot_callback_handler():
         print(f"Received event type: {event_type}")
 
         if event_type == EVENT_VERIFICATION:
-            # For event verification, return the 'event' field from the payload.
-            return data.get("event")
+            # For event verification, return the 'event' field from the payload as a JSON object.
+            return jsonify({"event": data.get("event")})
         
         elif event_type == NEW_BOT_SUBSCRIBER:
             # Handle new bot subscriber event.
