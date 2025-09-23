@@ -32,37 +32,41 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
 
 
 
-
-@app.route("/bot-callback", methods=["POST"])
 def bot_callback_handler():
     body: bytes = request.get_data()
     signature: str = request.headers.get("signature")
     # 1. validate the signature
     if not is_valid_signature(SIGNING_SECRET, body, signature):
-    return ""
+        return ""
     # 2. handle events
     data: Dict[str, Any] = json.loads(body)
     event_type: str = data.get("event_type", "")
+
     if event_type == EVENT_VERIFICATION:
-    return data.get("event")
+        return data.get("event")
     elif event_type == NEW_BOT_SUBSCRIBER:
     # fill with your own code
-    pass
+        pass
     elif event_type == MESSAGE_FROM_BOT_SUBSCRIBER:
     # fill with your own code
-    pass
+        pass
+
     elif event_type == INTERACTIVE_MESSAGE_CLICK:
-    # fill with your own code
-    pass
+        # fill with your own code
+        pass
+
     elif event_type == BOT_ADDED_TO_GROUP_CHAT:
     # fill with your own code
-    pass
+        pass
+
     elif event_type == BOT_REMOVED_FROM_GROUP_CHAT:
     # fill with your own code
-    pass
+        pass
+
     elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
     # fill with your own code
-    pass
+        pass
+    
     else:
-    pass
+        pass
     return ""
