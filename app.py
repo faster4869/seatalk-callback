@@ -62,7 +62,12 @@ def bot_callback_handler():
     signature: str = request.headers.get("signature")
 
     # 1. Validate the signature for security.
-    if not signature or not is_valid_signature(SIGNING_SECRET, body, signature):
+    # We will print the signatures for debugging purposes.
+    calculated_signature = hmac.new(SIGNING_SECRET, body, hashlib.sha256).hexdigest()
+    print(f"Received Signature: {signature}")
+    print(f"Calculated Signature: {calculated_signature}")
+
+    if not signature or not hmac.compare_digest(calculated_signature, signature):
         # Return a 403 Forbidden status for invalid signatures.
         return "Invalid signature", 403
         
