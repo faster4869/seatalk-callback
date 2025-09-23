@@ -5,10 +5,13 @@ app = Flask(__name__)
 @app.route("/callback", methods=["POST"])
 def seatalk_callback():
     data = request.json
-    print("收到 SeaTalk Callback:", data)
 
-    # 這裡可以依 event_type 做不同處理
-    # SeaTalk 驗證要求回傳 200 + JSON
+    # 驗證 SeaTalk callback
+    if "seatalk_challenge" in data:
+        return data["seatalk_challenge"], 200  # 原封不動回傳
+       
+    # 一般事件處理
+    print("收到 SeaTalk Callback:", data)
     return jsonify({"status":"ok"}), 200
 
 @app.route("/")
