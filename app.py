@@ -122,6 +122,7 @@ def bot_callback_handler():
         elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
+            print(data)
             print("New mentioned message in group chat received.")
             pass
         
