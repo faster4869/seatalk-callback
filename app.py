@@ -2,10 +2,8 @@ import hashlib
 import json
 from typing import Dict, Any
 from flask import Flask, request, jsonify
-import os
 
-# 從環境變數取得簽名 Secret
-SIGNING_SECRET = os.environ.get("SIGNING_SECRET").encode()
+SIGNING_SECRET = b"DBJFu8MhySlaPkLgIvR0QGmfR2JfBVQ3"
 
 # SeaTalk 事件列表
 EVENT_VERIFICATION = "event_verification"
