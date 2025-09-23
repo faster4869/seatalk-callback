@@ -4,7 +4,7 @@ from typing import Dict, Any
 from flask import Flask, request, jsonify
 
 # settings
-SIGNING_SECRET = b"xxxx"
+SIGNING_SECRET = b"DBJFu8MhySlaPkLgIvR0QGmfR2JfBVQ3"
 
 # event list
 EVENT_VERIFICATION = "event_verification"
