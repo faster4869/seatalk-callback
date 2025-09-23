@@ -76,12 +76,13 @@ def bot_callback_handler():
         print(f"Received event type: {event_type}")
 
         if event_type == EVENT_VERIFICATION:
-            # For event verification, return the 'challenge' field from the payload as a plain text string.
-            challenge = data.get("challenge")
-            if challenge:
-                return challenge
+            # For event verification, return the 'event' field from the payload as a plain text string.
+            # This corrects the previous assumption that the key was 'challenge'.
+            event_data = data.get("event")
+            if event_data:
+                return event_data
             else:
-                return "Verification challenge not found.", 400
+                return "Verification event data not found.", 400
         
         elif event_type == NEW_BOT_SUBSCRIBER:
             # Handle new bot subscriber event.
