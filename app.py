@@ -1,5 +1,6 @@
 import hashlib
 import json
+import requests
 from typing import Dict, Any
 
 from flask import Flask, request, jsonify
