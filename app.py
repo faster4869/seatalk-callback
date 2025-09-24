@@ -43,31 +43,18 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     # The signature must be calculated on the raw body + signing secret.
     calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
     return calculated_signature == signature
+    
 def init_firebase():
-    """
-    從環境變數初始化 Firebase Admin SDK。
-    Render 平台會將我們設定的秘密變數注入到執行環境中。
-    """
-    # 從環境變數 'FIREBASE_SERVICE_ACCOUNT_JSON' 讀取金鑰的 JSON 字串
-    service_account_json_str = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    try:
+        cred = firebase_admin.credentials.Certificate("path/to/your/key.json")
+        db_url = "https://your-project.firebaseio.com"
+        firebase_admin.initialize_app(cred, {"databaseURL": db_url})
+        print("Firebase initialized successfully.")
+    except ValueError as e:
+        # 如果已經初始化過，這裡會捕獲錯誤並跳過
+        print(f"Error during Firebase initialization: {e}")
 
-    if not service_account_json_str:
-        # 如果在部署環境中找不到這個變數，就拋出錯誤，避免應用程式啟動失敗
-        raise ValueError("環境變數 'FIREBASE_SERVICE_ACCOUNT_JSON' 未設定。")
-
-    # 將 JSON 字串解析成 Python 的字典
-    service_account_info = json.loads(service_account_json_str)
-    
-    # 從字典初始化 credentials
-    cred = credentials.Certificate(service_account_info)
-    
-    # 從環境變數讀取資料庫 URL
-    db_url = os.environ.get("FIREBASE_DATABASE_URL")
-    if not db_url:
-        raise ValueError("環境變數 'FIREBASE_DATABASE_URL' 未設定。")
-        
-    firebase_admin.initialize_app(cred, {"databaseURL": db_url})
-    print("Firebase Admin SDK 初始化成功。")
+init_firebase()
 
 
 # add_err_order 函式維持不變
