@@ -40,6 +40,53 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
     return calculated_signature == signature
 
+def add_err_order(client, new_order_sns):
+    """
+    讀取現有的 vm_err_orders/OrderSN 陣列，並新增一個或多個訂單號碼。
+
+    Args:
+        client (FirebaseClient): 你的 FirebaseClient 實例。
+        new_order_sns (str or list): 要新增的一個或多個訂單號碼。
+    """
+    # 確保 new_order_sns 是可迭代的列表，以便於處理
+    if isinstance(new_order_sns, str):
+        new_order_sns = [new_order_sns]
+    elif not isinstance(new_order_sns, list):
+        print("輸入格式不正確，請提供一個字串或列表。")
+        return
+
+    path = "vm_err_orders/OrderSN"
+    
+    # 1. 讀取現有的 OrderSN 陣列
+    existing_list = client.get(path)
+
+    # 處理讀取到的資料格式
+    if existing_list is None:
+        # 如果路徑不存在或資料為空，則建立一個新陣列
+        existing_list = []
+        print("資料庫中沒有現有的訂單號碼，將建立新陣列。")
+    elif isinstance(existing_list, dict):
+        # 如果資料庫中的資料是字典格式 (e.g., {"0": "...", "1": "..."})，則轉換成列表
+        existing_list = list(existing_list.values())
+        
+    added_count = 0
+    
+    # 2. 遍歷要新增的訂單號碼列表，並逐一檢查和新增
+    for order_sn in new_order_sns:
+        if order_sn not in existing_list:
+            existing_list.append(order_sn)
+            print(f"成功將新的訂單號碼 {order_sn} 加入。")
+            added_count += 1
+        else:
+            print(f"訂單號碼 {order_sn} 已存在，無需重複新增。")
+            
+    # 3. 如果有任何新的訂單號碼被加入，才將更新後的列表寫回資料庫
+    if added_count > 0:
+        response = client.set(path, existing_list)
+        print("更新後的資料寫入資料庫:", response)
+    else:
+        print("沒有新的訂單號碼需要寫入。")
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -134,7 +181,9 @@ def bot_callback_handler():
         
                 # 移除列表中的第一個元素 (即 @X10A 指令本身)
                 if lines:
+                    client = FirebaseClient("https://shopee-vm-api-default-rtdb.firebaseio.com")
                     order_sn_list = lines[1:]
+                    add_err_order(client, order_sn_list)
                     print("解析出的訂單號碼列表:", order_sn_list)
                 else:
                     order_sn_list = []
