@@ -211,8 +211,6 @@ def bot_callback_handler():
                         data_dict["TN"] = line.split("：", 1)[1]
             
                 new_data = [data_dict]
-
-                init_firebase()
                 add_err_order(new_data)
 
                 
