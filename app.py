@@ -1,41 +1,12 @@
 import hashlib
 import json
-import requests
-
+import firebase_admin
+from firebase_admin import credentials, db
 from typing import Dict, Any, List
-
+import os
 from flask import Flask, request, jsonify
 
-class FirebaseClient:
-    def __init__(self, base_url, auth=None):
-        self.base_url = base_url.rstrip("/")
-        self.auth = auth
 
-    def _make_url(self, path):
-        url = f"{self.base_url}/{path}.json"
-        if self.auth:
-            url += f"?auth={self.auth}"
-        return url
-
-    def get(self, path):
-        resp = requests.get(self._make_url(path))
-        return resp.json()
-
-    def set(self, path, data):
-        resp = requests.put(self._make_url(path), json=data)
-        return resp.json()
-
-    def update(self, path, data):
-        resp = requests.patch(self._make_url(path), json=data)
-        return resp.json()
-
-    def push(self, path, data):
-        resp = requests.post(self._make_url(path), json=data)
-        return resp.json()
-
-    def delete(self, path):
-        resp = requests.delete(self._make_url(path))
-        return resp.status_code == 200
 
 # settings
 # WARNING: DO NOT hardcode your signing secret in a production environment.
@@ -72,67 +43,86 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     # The signature must be calculated on the raw body + signing secret.
     calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
     return calculated_signature == signature
-
-def add_err_order(client: FirebaseClient, new_orders: List[Dict[str, str]]):
+def init_firebase():
     """
-    新增一個或多個包含 OrderSN 和 TN 的錯誤訂單記錄，並確保TN不重複。
+    從環境變數初始化 Firebase Admin SDK。
+    Render 平台會將我們設定的秘密變數注入到執行環境中。
+    """
+    # 從環境變數 'FIREBASE_SERVICE_ACCOUNT_JSON' 讀取金鑰的 JSON 字串
+    service_account_json_str = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+
+    if not service_account_json_str:
+        # 如果在部署環境中找不到這個變數，就拋出錯誤，避免應用程式啟動失敗
+        raise ValueError("環境變數 'FIREBASE_SERVICE_ACCOUNT_JSON' 未設定。")
+
+    # 將 JSON 字串解析成 Python 的字典
+    service_account_info = json.loads(service_account_json_str)
+    
+    # 從字典初始化 credentials
+    cred = credentials.Certificate(service_account_info)
+    
+    # 從環境變數讀取資料庫 URL
+    db_url = os.environ.get("FIREBASE_DATABASE_URL")
+    if not db_url:
+        raise ValueError("環境變數 'FIREBASE_DATABASE_URL' 未設定。")
+        
+    firebase_admin.initialize_app(cred, {"databaseURL": db_url})
+    print("Firebase Admin SDK 初始化成功。")
+
+
+# add_err_order 函式維持不變
+def add_err_order(new_orders: List[Dict[str, str]]):
+    """
+    新增一個或多個包含 OrderSN 和 TN 的錯誤訂單記錄，並確保 TN 不重複。
 
     Args:
-        client (FirebaseClient): 你的 FirebaseClient 實例。
-        new_orders (List[Dict[str, str]]): 包含 OrderSN 和 TN 的訂單列表，例如：
-                                            [{'OSN': '2509170Q5BKFNJ3', 'TN': 'TN001'},
-                                             {'OSN': '2509170Q5BKFNJ3', 'TN': 'TN002'}]
+        new_orders (List[Dict[str, str]]):
+            e.g. [{"OSN": "250903GE2XFARX", "TN": "TN001"},
+                  {"OSN": "250903GE2XFARX", "TN": "TN002"}]
     """
-    # 檢查輸入格式
-    if not isinstance(new_orders, list) or not all(isinstance(order, dict) and 'OSN' in order and 'TN' in order for order in new_orders):
-        print("輸入格式不正確，請提供一個包含{'OSN': '...', 'TN': '...'}字典的列表。")
+    if not isinstance(new_orders, list) or not all(
+        isinstance(order, dict) and "OSN" in order and "TN" in order
+        for order in new_orders
+    ):
+        print("輸入格式不正確，請提供一個包含 {'OSN': '...', 'TN': '...'} 的列表。")
         return
 
     base_path = "vm_err_orders/OrderSN"
-    # 步驟 1: 將輸入的訂單按 OSN 分組
     grouped_orders: Dict[str, List[str]] = {}
+
+    # Step 1: 依 OSN 分組
     for order in new_orders:
-        order_sn = order['OSN']
-        tn = order['TN']
+        order_sn = order["OSN"]
+        tn = order["TN"]
         if order_sn not in grouped_orders:
             grouped_orders[order_sn] = []
         if tn not in grouped_orders[order_sn]:
             grouped_orders[order_sn].append(tn)
-    
-    print("已將所有輸入的TN按OSN分組。")
-    
-    # 步驟 2: 遍歷每個 OSN，讀取現有資料並合併
-    added_count = 0
+
+    # Step 2: 更新 DB
     for order_sn, new_tns in grouped_orders.items():
-        # 讀取現有 TN 列表
-        existing_tns = client.get(f"{base_path}/{order_sn}")
-        
-        # 處理資料格式
-        if existing_tns is None:
-            existing_tns = []
-        elif not isinstance(existing_tns, list):
+        ref = db.reference(f"{base_path}/{order_sn}")
+        existing_tns = ref.get() or []
+
+        if not isinstance(existing_tns, list):
             existing_tns = [existing_tns]
-        
+
         updated_list = existing_tns.copy()
-        
-        # 檢查並新增 TN，確保不重複
+        added = False
         for tn in new_tns:
             if tn not in updated_list:
                 updated_list.append(tn)
-                added_count += 1
                 print(f"將新 TN '{tn}' 加入到 OSN '{order_sn}'。")
+                added = True
             else:
                 print(f"TN '{tn}' 已存在於 OSN '{order_sn}'，跳過。")
 
-        # 寫回資料庫
-        if len(updated_list) > len(existing_tns):
-            client.set(f"{base_path}/{order_sn}", updated_list)
+        if added:
+            ref.set(updated_list)
             print(f"已更新 OSN '{order_sn}' 的 TN 列表。")
         else:
             print(f"OSN '{order_sn}' 沒有新 TN 需要寫入。")
-            
-    if added_count == 0:
-        print("沒有任何新訂單或 TN 需要寫入資料庫。")
+
 
 
 @app.route("/", methods=["GET"])
@@ -235,9 +225,10 @@ def bot_callback_handler():
             
                 new_data = [data_dict]
 
-                client = FirebaseClient("https://shopee-vm-api-default-rtdb.firebaseio.com")
-                add_err_order(client, new_data)
+                init_firebase()
+                add_err_order(new_data)
 
+                
             else:
                 print("訊息不是以 '@X10A' 指令開頭，略過處理。")
         
