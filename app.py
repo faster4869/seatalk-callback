@@ -123,10 +123,24 @@ def bot_callback_handler():
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
             print(data)
-            plain_text  = data["event"]["message"]["text"]["plain_text"]
+            plain_text = data["event"]["message"]["text"]["plain_text"]
             print(plain_text)
             print("New mentioned message in group chat received.")
-            pass
+        
+            # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
+            if plain_text.strip().startswith('@X10A'):
+                # 使用 \n 分割字串，並過濾掉空字串
+                lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
+        
+                # 移除列表中的第一個元素 (即 @X10A 指令本身)
+                if lines:
+                    order_sn_list = lines[1:]
+                    print("解析出的訂單號碼列表:", order_sn_list)
+                else:
+                    order_sn_list = []
+                    print("訊息格式不正確，未找到訂單號碼。")
+            else:
+                print("訊息不是以 '@X10A' 指令開頭，略過處理。")
         
         else:
             # Log unknown event types.
