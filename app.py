@@ -1,7 +1,8 @@
 import hashlib
 import json
 import requests
-from typing import Dict, Any
+
+from typing import Dict, Any, List
 
 from flask import Flask, request, jsonify
 
@@ -72,52 +73,66 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
     return calculated_signature == signature
 
-def add_err_order(client, new_order_sns):
+def add_err_order(client: FirebaseClient, new_orders: List[Dict[str, str]]):
     """
-    讀取現有的 vm_err_orders/OrderSN 陣列，並新增一個或多個訂單號碼。
+    新增一個或多個包含 OrderSN 和 TN 的錯誤訂單記錄，並確保TN不重複。
 
     Args:
         client (FirebaseClient): 你的 FirebaseClient 實例。
-        new_order_sns (str or list): 要新增的一個或多個訂單號碼。
+        new_orders (List[Dict[str, str]]): 包含 OrderSN 和 TN 的訂單列表，例如：
+                                            [{'OSN': '2509170Q5BKFNJ3', 'TN': 'TN001'},
+                                             {'OSN': '2509170Q5BKFNJ3', 'TN': 'TN002'}]
     """
-    # 確保 new_order_sns 是可迭代的列表，以便於處理
-    if isinstance(new_order_sns, str):
-        new_order_sns = [new_order_sns]
-    elif not isinstance(new_order_sns, list):
-        print("輸入格式不正確，請提供一個字串或列表。")
+    # 檢查輸入格式
+    if not isinstance(new_orders, list) or not all(isinstance(order, dict) and 'OSN' in order and 'TN' in order for order in new_orders):
+        print("輸入格式不正確，請提供一個包含{'OSN': '...', 'TN': '...'}字典的列表。")
         return
 
-    path = "vm_err_orders/OrderSN"
+    base_path = "vm_err_orders/OrderSN"
+    # 步驟 1: 將輸入的訂單按 OSN 分組
+    grouped_orders: Dict[str, List[str]] = {}
+    for order in new_orders:
+        order_sn = order['OSN']
+        tn = order['TN']
+        if order_sn not in grouped_orders:
+            grouped_orders[order_sn] = []
+        if tn not in grouped_orders[order_sn]:
+            grouped_orders[order_sn].append(tn)
     
-    # 1. 讀取現有的 OrderSN 陣列
-    existing_list = client.get(path)
-
-    # 處理讀取到的資料格式
-    if existing_list is None:
-        # 如果路徑不存在或資料為空，則建立一個新陣列
-        existing_list = []
-        print("資料庫中沒有現有的訂單號碼，將建立新陣列。")
-    elif isinstance(existing_list, dict):
-        # 如果資料庫中的資料是字典格式 (e.g., {"0": "...", "1": "..."})，則轉換成列表
-        existing_list = list(existing_list.values())
-        
+    print("已將所有輸入的TN按OSN分組。")
+    
+    # 步驟 2: 遍歷每個 OSN，讀取現有資料並合併
     added_count = 0
-    
-    # 2. 遍歷要新增的訂單號碼列表，並逐一檢查和新增
-    for order_sn in new_order_sns:
-        if order_sn not in existing_list:
-            existing_list.append(order_sn)
-            print(f"成功將新的訂單號碼 {order_sn} 加入。")
-            added_count += 1
+    for order_sn, new_tns in grouped_orders.items():
+        # 讀取現有 TN 列表
+        existing_tns = client.get(f"{base_path}/{order_sn}")
+        
+        # 處理資料格式
+        if existing_tns is None:
+            existing_tns = []
+        elif not isinstance(existing_tns, list):
+            existing_tns = [existing_tns]
+        
+        updated_list = existing_tns.copy()
+        
+        # 檢查並新增 TN，確保不重複
+        for tn in new_tns:
+            if tn not in updated_list:
+                updated_list.append(tn)
+                added_count += 1
+                print(f"將新 TN '{tn}' 加入到 OSN '{order_sn}'。")
+            else:
+                print(f"TN '{tn}' 已存在於 OSN '{order_sn}'，跳過。")
+
+        # 寫回資料庫
+        if len(updated_list) > len(existing_tns):
+            client.set(f"{base_path}/{order_sn}", updated_list)
+            print(f"已更新 OSN '{order_sn}' 的 TN 列表。")
         else:
-            print(f"訂單號碼 {order_sn} 已存在，無需重複新增。")
+            print(f"OSN '{order_sn}' 沒有新 TN 需要寫入。")
             
-    # 3. 如果有任何新的訂單號碼被加入，才將更新後的列表寫回資料庫
-    if added_count > 0:
-        response = client.set(path, existing_list)
-        print("更新後的資料寫入資料庫:", response)
-    else:
-        print("沒有新的訂單號碼需要寫入。")
+    if added_count == 0:
+        print("沒有任何新訂單或 TN 需要寫入資料庫。")
 
 
 @app.route("/", methods=["GET"])
@@ -208,18 +223,21 @@ def bot_callback_handler():
         
             # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
             if plain_text.strip().startswith('@X10A'):
-                # 使用 \n 分割字串，並過濾掉空字串
-                lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
-        
-                # 移除列表中的第一個元素 (即 @X10A 指令本身)
-                if lines:
-                    client = FirebaseClient("https://shopee-vm-api-default-rtdb.firebaseio.com")
-                    order_sn_list = lines[1:]
-                    add_err_order(client, order_sn_list)
-                    print("解析出的訂單號碼列表:", order_sn_list)
-                else:
-                    order_sn_list = []
-                    print("訊息格式不正確，未找到訂單號碼。")
+                # 使用 \n 分割字串，並過濾出指定開頭的行
+                lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Order SN', '出貨失敗TN'))]
+            
+                data_dict = {}
+                for line in lines:
+                    if line.startswith("Order SN"):
+                        data_dict["OSN"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                    elif line.startswith("出貨失敗TN"):
+                        data_dict["TN"] = line.split("：", 1)[1]
+            
+                new_data = [data_dict]
+
+                client = FirebaseClient("https://shopee-vm-api-default-rtdb.firebaseio.com")
+                add_err_order(client, new_data)
+
             else:
                 print("訊息不是以 '@X10A' 指令開頭，略過處理。")
         
