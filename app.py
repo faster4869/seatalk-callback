@@ -4,6 +4,37 @@ from typing import Dict, Any
 
 from flask import Flask, request, jsonify
 
+class FirebaseClient:
+    def __init__(self, base_url, auth=None):
+        self.base_url = base_url.rstrip("/")
+        self.auth = auth
+
+    def _make_url(self, path):
+        url = f"{self.base_url}/{path}.json"
+        if self.auth:
+            url += f"?auth={self.auth}"
+        return url
+
+    def get(self, path):
+        resp = requests.get(self._make_url(path))
+        return resp.json()
+
+    def set(self, path, data):
+        resp = requests.put(self._make_url(path), json=data)
+        return resp.json()
+
+    def update(self, path, data):
+        resp = requests.patch(self._make_url(path), json=data)
+        return resp.json()
+
+    def push(self, path, data):
+        resp = requests.post(self._make_url(path), json=data)
+        return resp.json()
+
+    def delete(self, path):
+        resp = requests.delete(self._make_url(path))
+        return resp.status_code == 200
+
 # settings
 # WARNING: DO NOT hardcode your signing secret in a production environment.
 # Instead, load it from a secure environment variable.
