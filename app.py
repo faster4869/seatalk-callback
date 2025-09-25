@@ -126,6 +126,52 @@ def add_err_order(new_orders: List[Dict[str, str]]):
         else:
             print(f"OSN '{order_sn}' 沒有新 TN 需要寫入。")
 
+def bot_reply(content: str, group_id: str, thread_id: str = None ):
+
+
+    app_id = os.environ.get("SEATALK_BOT_X10A_APP_ID")
+    app_secret = os.environ.get("SEATALK_BOT_X10A_APP_SECRET")
+
+
+    api_url = "https://openapi.seatalk.io/auth/app_access_token"
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    # 定義請求的資料
+    payload = {"app_id": app_id, "app_secret": app_secret}
+
+    try:
+        response = requests.post(api_url, json=payload, headers=headers)
+        response_data = response.json()
+        access_token = response_data.get("app_access_token")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed")
+    
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    message = {
+        "tag": "text",
+        "text": {
+            "content": content
+        }
+    }
+    if thread_id:
+        message["thread_id"] = thread_id
+    data = {
+        "group_id": group_id,
+        "message": message
+    }
+    api_url = "https://openapi.seatalk.io/messaging/v2/group_chat"
+    response = requests.post(api_url, headers=headers, json=data)
+
+    return response
+
 
 
 @app.route("/", methods=["GET"])
@@ -209,10 +255,11 @@ def bot_callback_handler():
         elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
-            print(data)
+            
             plain_text = data["event"]["message"]["text"]["plain_text"]
-            print(plain_text)
+            thread_id = data["event"]["message"]["message_id"]
             print("New mentioned message in group chat received.")
+            print(f"收到的CallBack內容:\n{data}")
         
             # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
             if plain_text.strip().startswith('@X10A'):
@@ -228,6 +275,9 @@ def bot_callback_handler():
             
                 new_data = [data_dict]
                 add_err_order(new_data)
+
+                group_id = "NzMwNTUzMTAzMzg3"
+                bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
                 
             else:
