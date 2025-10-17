@@ -256,7 +256,7 @@ def bot_callback_handler():
         elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
-            
+            group_id = data["event"]["group_id"]
             plain_text = data["event"]["message"]["text"]["plain_text"]
             thread_id = data["event"]["message"]["message_id"]
             print("New mentioned message in group chat received.")
@@ -277,7 +277,7 @@ def bot_callback_handler():
                 new_data = [data_dict]
                 add_err_order(new_data)
 
-                group_id = "NzMwNTUzMTAzMzg3"
+                #group_id = "NzMwNTUzMTAzMzg3"
                 bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
                 
