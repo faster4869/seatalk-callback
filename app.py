@@ -263,7 +263,7 @@ def bot_callback_handler():
             print(f"收到的CallBack內容:\n{data}")
         
             # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
-            if plain_text.strip().startswith('@X10A'):
+            if plain_text.strip().startswith('(Production)'):
                 # 使用 \n 分割字串，並過濾出指定開頭的行
                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Order SN', '出貨失敗TN'))]
             
