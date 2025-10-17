@@ -271,7 +271,7 @@ def bot_callback_handler():
                 for line in lines:
                     if line.startswith("Order SN"):
                         data_dict["OSN"] = line.split("：", 1)[1]  # 取冒號後面的部分
-                    elif line.startswith("出貨失敗TN"):
+                    elif line.startswith("出貨失敗 TN"):
                         data_dict["TN"] = line.split("：", 1)[1]
             
                 new_data = [data_dict]
