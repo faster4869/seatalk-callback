@@ -296,8 +296,9 @@ def bot_callback_handler():
                  flow = "" #初始化flow變數
                  if "B2C" in data_dict["Seller type"].strip():
                      flow = "B2C"
-
-                 bot_reply(f'已反應{flow}PIC處理', group_id, thread_id)
+                
+                 content = f'已反應{flow}PIC<mention-tag target="seatalk://user?email=sylvia.lin@shopee.com"/>處理'
+                 bot_reply(content, group_id, thread_id)
                  print(f"Parsed data: {data_dict}")
 
                 
