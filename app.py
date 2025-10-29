@@ -27,7 +27,7 @@ NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT = "new_mentioned_message_received
 
 app = Flask(__name__)
 
-
+#Seatalk_APP驗證程序
 def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bool:
     """
     Validates the signature of the incoming request using SHA256.
@@ -280,10 +280,27 @@ def bot_callback_handler():
                 #group_id = "NzMwNTUzMTAzMzg3"
                 bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
+            elif plain_text.strip().startswith('Hi Team'):
+                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Reason', 'Username'))]
+
+                 data_dict = {}
+
+                 for line in lines:
+                     if line.startswith("Seller type"):
+                            data_dict["Seller type"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                     elif line.startswith("Return Reason"):
+                            data_dict["Return Reason"] = line.split("：", 1)[1]
+                     elif line.startswith("Username"):
+                            data_dict["Username"] = line.split("：", 1)[1]
+
+
+                 bot_reply('收到您的訊息，我們會盡快處理，謝謝！', group_id, thread_id)
+                 print(f"Parsed data: {data_dict}")
+
                 
             else:
-                print("訊息不是以 '@X10A' 指令開頭，略過處理。")
-        
+                print("訊息不是以指定關鍵字開頭，故略過處理。")
+                #這邊後續要改成發送錯誤訊息給我，需要新增一個函式
         else:
             # Log unknown event types.
             print(f"Unknown event type: {event_type}")
