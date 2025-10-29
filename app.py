@@ -294,8 +294,8 @@ def bot_callback_handler():
                             data_dict["Username"] = line.split("：", 1)[1]
 
                  flow = "" #初始化flow變數
-                 if data_dict["Seller type"].strip().contains("B2C"):
-                     flow = "B2C假貨流程" 
+                 if "B2C" in data_dict["Seller type"].strip():
+                     flow = "B2C"
 
                  bot_reply(f'已反應{flow}PIC處理', group_id, thread_id)
                  print(f"Parsed data: {data_dict}")
