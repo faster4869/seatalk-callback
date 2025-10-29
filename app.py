@@ -281,23 +281,86 @@ def bot_callback_handler():
                 bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
             elif plain_text.strip().startswith('Hi Team'):
-                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Reason', 'Username'))]
+                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Status','Return Reason', 'Seller name'))]
 
                  data_dict = {}
 
                  for line in lines:
                      if line.startswith("Seller type"):
                             data_dict["Seller type"] = line.split("：", 1)[1]  # 取冒號後面的部分
+
+                     elif line.startswith("Return Status"):
+                            data_dict["Return Status"] = line.split("：", 1)[1]
+
                      elif line.startswith("Return Reason"):
                             data_dict["Return Reason"] = line.split("：", 1)[1]
-                     elif line.startswith("Username"):
-                            data_dict["Username"] = line.split("：", 1)[1]
 
+                     elif line.startswith("Seller name"):
+                            data_dict["Seller name"] = line.split("：", 1)[1]
+
+                 special_seller_list = [
+                    "fe_amart",
+                    "digitalcitytw",
+                    "senao.tw",
+                    "daikin_senao",
+                    "samsung_he",
+                    "sakuyo_Japan",
+                    "bianco_senao",
+                    "MegaKing_senao",
+                    "panasonic_senao",
+                    "shopee_pass",
+                    "esim_go",
+                    "shopee24h",
+                    "shopee24h_hb",
+                    "shopee24h_el",
+                    "asus_official_store",
+                    "outsourcing_24h",
+                    "thebestofkaohsiung",
+                    "foodie.select",
+                    "game_official",
+                    "game_quick",
+                    "google.tw",
+                    "oppo_official",
+                    "realmetw",
+                    "shopee_consumables",
+                    "sp_games",
+                    "ticket_service",
+                    "topbrandtw",
+                    "shopee_choice_hl",
+                    "apple.tw",
+                ]
                  flow = "" #初始化flow變數
-                 if "B2C" in data_dict["Seller type"].strip():
-                     flow = "B2C"
+                 mention_tag = ""#初始化mention_tag變數
+
+                 if "Judging" in data_dict.get("Return Status", "").strip():
+                    if data_dict.get("Seller name", "").strip() in special_seller_list:
+                        flow = "Mall 特賣"
+                        mention_tag = "<mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/><mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/>"
+                    else:
+                        reason = data_dict.get("Return Reason", "").strip()
+                        if "包裹未送達／無法取件" in reason:
+                            flow = "Flow A"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/><mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/>"
+                        elif "商品缺件／賣家通知缺貨" in reason:
+                            flow = "Flow B"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=tina.tang@shopee.com\"/><mention-tag target=\"seatalk://user?email=jennifer.su@shopee.com\"/>"
+                        else:
+                            flow = "Flow C"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=sharon.chuic@shopee.com\"/><mention-tag target=\"seatalk://user?email=ziv.hung@shopee.com\"/>"
                 
-                 content = f'已反應{flow}PIC<mention-tag target="seatalk://user?email=sylvia.lin@shopee.com"/>處理'
+                 else:
+                     if "C2C" in data_dict.get("Seller type", "").strip():
+                         flow = "C2C Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=alice.cheng@shopee.com\"/><mention-tag target=\"seatalk://user?email=janice.lin@shopee.com\"/>"
+                     elif "Mall" in data_dict.get("Seller type", "").strip():
+                         flow = "Mall Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=amelie.wang@shopee.com\"/><mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
+                     elif "CB" in data_dict.get("Seller type", "").strip():
+                         flow = "CB Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=queenie.chien@shopee.com\"/><mention-tag target=\"seatalk://user?email=winnie.hsu@shopee.com\"/>"
+                     
+
+                 content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                  bot_reply(content, group_id, thread_id)
                  print(f"Parsed data: {data_dict}")
 
