@@ -281,7 +281,7 @@ def bot_callback_handler():
                 bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
             elif plain_text.strip().startswith('Hi Team'):
-                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Status','Return Reason', 'Seller name'))]
+                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Status','Return Reason', 'Seller Username'))]
 
                  data_dict = {}
 
@@ -295,8 +295,8 @@ def bot_callback_handler():
                      elif line.startswith("Return Reason"):
                             data_dict["Return Reason"] = line.split("：", 1)[1]
 
-                     elif line.startswith("Seller name"):
-                            data_dict["Seller name"] = line.split("：", 1)[1]
+                     elif line.startswith("Seller Username"):
+                            data_dict["Seller Username"] = line.split("：", 1)[1]
 
                  special_seller_list = [
                     "fe_amart",
@@ -333,7 +333,7 @@ def bot_callback_handler():
                  mention_tag = ""#初始化mention_tag變數
 
                  if "Judging" in data_dict.get("Return Status", "").strip():
-                    if data_dict.get("Seller name", "").strip() in special_seller_list:
+                    if data_dict.get("Seller Username", "").strip() in special_seller_list:
                         flow = "Mall 特賣"
                         mention_tag = "<mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/><mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/>"
                     else:
