@@ -287,11 +287,12 @@ def bot_callback_handler():
 
                  for line in lines:
                      if line.startswith("Seller type"):
-                            data_dict["Seller type"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                            normalized_line = line.replace("：", ":").strip()
+                            data_dict["Seller type"] = normalized_line.split("：", 1)[1]  # 取冒號後面的部分
 
                      elif line.startswith("Return Status"):
                             normalized_line = line.replace("：", ":").strip()
-                            data_dict["Return Status"] = normalized_line.split(":", 1)[1].strip()
+                            data_dict["Return Status"] = normalized_line.split("：", 1)[1].strip()
 
                      elif line.startswith("Return Reason"):
                             normalized_line = line.replace("：", ":").strip()
@@ -335,6 +336,7 @@ def bot_callback_handler():
                  flow = "" #初始化flow變數
                  mention_tag = ""#初始化mention_tag變數
 
+                print(data_dict)
                  if "Requested" in data_dict.get("Return Status", "").strip():
                      
                      mention_tag = "<mention-tag target=\"seatalk://user?email=ziv.hung@shopee.com\"/><mention-tag target=\"seatalk://user?email=sharon.chuic@shopee.com\"/>"
