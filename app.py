@@ -368,7 +368,7 @@ def bot_callback_handler():
                             content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                             bot_reply(content, group_id, thread_id)
                 
-                 elif "Accepted" in data_dict.get("Return Status", "").strip() and "Seller dispute" in data_dict.get("Return Status", "").strip() and "Seller Dispute" in data_dict.get("Return Status", "").strip():
+                 elif "Accepted" in data_dict.get("Return Status", "").strip() or "Seller dispute" in data_dict.get("Return Status", "").strip() or "Seller Dispute" in data_dict.get("Return Status", "").strip():
 
                      if "C2C" in data_dict.get("Seller type", "").strip():
                          flow = "C2C Dispute"
