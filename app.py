@@ -281,13 +281,13 @@ def bot_callback_handler():
                 bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
 
             elif plain_text.strip().startswith('Hi Team'):
-                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller type', 'Return Status','Return Reason', 'Seller Username'))]
+                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller Type', 'Return Status','Return Reason', 'Seller Username'))]
 
                  data_dict = {}
 
                  for line in lines:
-                     if line.startswith("Seller type"):
-                            data_dict["Seller type"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                     if line.startswith("Seller Type"):
+                            data_dict["Seller Type"] = line.split("：", 1)[1]  # 取冒號後面的部分
 
                      elif line.startswith("Return Status"):
                             normalized_line = line.replace("：", ":").strip()
@@ -342,7 +342,7 @@ def bot_callback_handler():
                      content = f'{mention_tag}\n此案件需協助推送到Judging，請PIC協助確認案件內容!'
                      bot_reply(content, group_id, thread_id)
 
-                 elif "Judging" in data_dict.get("Return Status", "").strip():
+                 elif "Judging" in data_dict.get("Return Status", "").strip() or "Processing" in data_dict.get("Return Status", "").strip():
                     if data_dict.get("Seller Username", "").strip() in special_seller_list:
                         flow = "Mall 特賣"
                         mention_tag = "<mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/><mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/>"
@@ -370,19 +370,19 @@ def bot_callback_handler():
                 
                  elif "Accepted" in data_dict.get("Return Status", "").strip() or "Seller dispute" in data_dict.get("Return Status", "").strip() or "Seller Dispute" in data_dict.get("Return Status", "").strip():
 
-                     if "C2C" in data_dict.get("Seller type", "").strip():
+                     if "C2C" in data_dict.get("Seller Type", "").strip():
                          flow = "C2C Dispute"
                          mention_tag = "<mention-tag target=\"seatalk://user?email=alice.cheng@shopee.com\"/><mention-tag target=\"seatalk://user?email=janice.lin@shopee.com\"/>"
                          content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                          bot_reply(content, group_id, thread_id)
 
-                     elif "Mall" in data_dict.get("Seller type", "").strip():
+                     elif "Mall" in data_dict.get("Seller Type", "").strip():
                          flow = "Mall Dispute"
                          mention_tag = "<mention-tag target=\"seatalk://user?email=amelie.wang@shopee.com\"/><mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
                          content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                          bot_reply(content, group_id, thread_id)
 
-                     elif "CB" in data_dict.get("Seller type", "").strip():
+                     elif "CB" in data_dict.get("Seller Type", "").strip():
                          flow = "CB Dispute"
                          mention_tag = "<mention-tag target=\"seatalk://user?email=queenie.chien@shopee.com\"/><mention-tag target=\"seatalk://user?email=winnie.hsu@shopee.com\"/>"
                          content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
