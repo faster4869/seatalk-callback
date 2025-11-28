@@ -331,6 +331,7 @@ def bot_callback_handler():
                     "topbrandtw",
                     "shopee_choice_hl",
                     "apple.tw",
+                    "asiawifi"
                 ]
                  flow = "" #初始化flow變數
                  mention_tag = ""#初始化mention_tag變數
@@ -378,7 +379,7 @@ def bot_callback_handler():
 
                      elif "Mall" in data_dict.get("Seller Type", "").strip():
                          flow = "Mall Dispute"
-                         mention_tag = "<mention-tag target=\"seatalk://user?email=amelie.wang@shopee.com\"/><mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/><mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
                          content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                          bot_reply(content, group_id, thread_id)
 
