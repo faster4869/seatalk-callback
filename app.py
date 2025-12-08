@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify
 # WARNING: DO NOT hardcode your signing secret in a production environment.
 # Instead, load it from a secure environment variable.
 # 🚨 IMPORTANT: This has been updated with your new signing secret.
-SIGNING_SECRET = b"uVIZS2r8yRk4bI-jtaCFvRETPH7sHApp"
+SIGNING_SECRET = os.environ.get("SEATALK_BOT_SECRETSIGNING_SECRET")
 
 # event list
 # ref: https://open.seatalk.io/docs/list-of-events
@@ -130,8 +130,8 @@ def add_err_order(new_orders: List[Dict[str, str]]):
 def bot_reply(content: str, group_id: str, thread_id: str = None ):
 
 
-    app_id = os.environ.get("SEATALK_BOT_X10A_APP_ID")
-    app_secret = os.environ.get("SEATALK_BOT_X10A_APP_SECRET")
+    app_id = os.environ.get("SEATALK_BOT_APP_ID")
+    app_secret = os.environ.get("SEATALK_BOT_APP_SECRET")
 
 
     api_url = "https://openapi.seatalk.io/auth/app_access_token"
