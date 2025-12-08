@@ -379,7 +379,8 @@ def bot_callback_handler():
 
                      elif "Mall" in data_dict.get("Seller Type", "").strip():
                          flow = "Mall Dispute"
-                         mention_tag = "<mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/><mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
+                         #移除Amelie，待後續加上
                          content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
                          bot_reply(content, group_id, thread_id)
 
