@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify
 # WARNING: DO NOT hardcode your signing secret in a production environment.
 # Instead, load it from a secure environment variable.
 # 🚨 IMPORTANT: This has been updated with your new signing secret.
-SIGNING_SECRET = os.environ.get("SEATALK_BOT_SECRETSIGNING_SECRET")
+SIGNING_SECRET = "uVIZS2r8yRk4bI-jtaCFvRETPH7sHApp"
 
 # event list
 # ref: https://open.seatalk.io/docs/list-of-events
@@ -42,8 +42,6 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     """
     # Use the SHA256 algorithm as specified by the Seatalk documentation.
     # The signature must be calculated on the raw body + signing secret.
-
-    secret_bytes = signing_secret.encode("utf-8")
     calculated_signature = hashlib.sha256(body + secret_bytes).hexdigest()
     return calculated_signature == signature
     
