@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify
 # WARNING: DO NOT hardcode your signing secret in a production environment.
 # Instead, load it from a secure environment variable.
 # 🚨 IMPORTANT: This has been updated with your new signing secret.
-SIGNING_SECRET = "uVIZS2r8yRk4bI-jtaCFvRETPH7sHApp"
+SIGNING_SECRET = b"uVIZS2r8yRk4bI-jtaCFvRETPH7sHApp"
 
 # event list
 # ref: https://open.seatalk.io/docs/list-of-events
