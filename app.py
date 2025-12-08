@@ -42,7 +42,7 @@ def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bo
     """
     # Use the SHA256 algorithm as specified by the Seatalk documentation.
     # The signature must be calculated on the raw body + signing secret.
-    calculated_signature = hashlib.sha256(body + secret_bytes).hexdigest()
+    calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
     return calculated_signature == signature
     
 def init_firebase():
