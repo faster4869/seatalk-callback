@@ -68,48 +68,43 @@ def get_employee_code(email: str, access_token: str) -> str:
 
 def build_leave_card(leave_data: dict) -> dict:
     return {
-        "config": {"wide_screen_mode": True},
-        "header": {
-            "title": {"tag": "plain_text", "content": "📋 請假審核申請"},
-            "template": "blue"
-        },
         "elements": [
             {
-                "tag": "div",
-                "fields": [
-                    {"is_short": True, "text": {"tag": "lark_md", "content": f"**員工**\n{leave_data['employee_name']}"}},
-                    {"is_short": True, "text": {"tag": "lark_md", "content": f"**假別**\n{leave_data['leave_type']}"}},
-                    {"is_short": True, "text": {"tag": "lark_md", "content": f"**開始時間**\n{leave_data['start_datetime']}"}},
-                    {"is_short": True, "text": {"tag": "lark_md", "content": f"**結束時間**\n{leave_data['end_datetime']}"}}
-                ]
+                "element_type": "title",
+                "title": {
+                    "text": "📋 請假審核申請"
+                }
             },
             {
-                "tag": "div",
-                "text": {"tag": "lark_md", "content": f"**原因**\n{leave_data['reason']}"}
+                "element_type": "description",
+                "description": {
+                    "format": 1,
+                    "text": f"**員工**：{leave_data['employee_name']}\n**假別**：{leave_data['leave_type']}\n**開始時間**：{leave_data['start_datetime']}\n**結束時間**：{leave_data['end_datetime']}\n**原因**：{leave_data['reason']}"
+                }
             },
-            {"tag": "hr"},
             {
-                "tag": "action",
-                "actions": [
-                    {
-                        "tag": "button",
-                        "text": {"tag": "plain_text", "content": "✅ Approve"},
-                        "type": "primary",
-                        "value": json.dumps({"action": "approve", "request_id": leave_data["request_id"]})
-                    },
-                    {
-                        "tag": "button",
-                        "text": {"tag": "plain_text", "content": "❌ 資料錯誤"},
-                        "type": "danger",
-                        "value": json.dumps({"action": "reject", "reason": "資料錯誤", "request_id": leave_data["request_id"]})
-                    },
-                    {
-                        "tag": "button",
-                        "text": {"tag": "plain_text", "content": "🚫 禁止休假"},
-                        "type": "danger",
-                        "value": json.dumps({"action": "reject", "reason": "禁止休假", "request_id": leave_data["request_id"]})
-                    }
-                ]
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "✅ Approve",
+                    "value": json.dumps({"action": "approve", "request_id": leave_data["request_id"]})
+                }
+            },
+            {
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "❌ 資料錯誤",
+                    "value": json.dumps({"action": "reject", "reason": "資料錯誤", "request_id": leave_data["request_id"]})
+                }
+            },
+            {
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "🚫 禁止休假",
+                    "value": json.dumps({"action": "reject", "reason": "禁止休假", "request_id": leave_data["request_id"]})
+                }
             }
         ]
     }
@@ -195,9 +190,10 @@ def leave_apply_test():
         payload = {
             "employee_code": "247857",
             "message": {
-                "tag": "interactive_card",
-                "interactive_card": card
-            }
+                "tag": "interactive_message",
+                "interactive_message": build_leave_card(leave_data)
+            },
+            "usable_platform": "mobile"
         }
 
         response = requests.post(
