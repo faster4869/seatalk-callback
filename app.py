@@ -165,6 +165,14 @@ def write_to_sheets(leave_data: dict, action: str, reason: str):
     except Exception as e:
         print(f"Google Sheets 寫入失敗: {e}")
 
+def find_row_by_request_id(sheet, request_id: str):
+    """在 Sheets 裡找到對應 request_id 的行號"""
+    records = sheet.get_all_values()
+    for i, row in enumerate(records):
+        if row[0] == request_id:  # A欄是 request_id
+            return i + 1  # gspread 行號從 1 開始
+    return None
+
 # =====================
 # 新 Route：接收請假申請
 # =====================
@@ -214,40 +222,53 @@ def leave_apply_test():
         
 @app.route("/leave/apply", methods=["POST"])
 def leave_apply():
-    """接收 AppSheet 送出的請假申請"""
     try:
         data = request.get_json()
         print(f"收到請假申請: {data}")
 
-        # 產生唯一 request_id
         request_id = f"LEAVE_{int(time.time())}"
 
-        # 查主管對應表
-        manager_ref = db.reference(f"employee_manager_map/{data['employee_email'].replace('.', '_').replace('@', '_at_')}")
-        manager_data = manager_ref.get()
+        # 查主管對應表（從 Sheets 的另一個工作表，或先暫時寫死）
+        manager_employee_code = "主管的employee_code"
+        manager_email = "主管的email"
 
-        if not manager_data:
-            return jsonify({"status": "error", "message": "找不到對應主管"}), 400
-
-        # 組合請假資料
         leave_data = {
             "request_id": request_id,
             "employee_email": data["employee_email"],
             "employee_name": data["employee_name"],
-            "manager_email": manager_data["manager_email"],
             "leave_type": data["leave_type"],
             "start_datetime": data["start_datetime"],
             "end_datetime": data["end_datetime"],
             "reason": data["reason"],
+            "manager_email": manager_email,
             "status": "pending",
+            "reject_reason": "",
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        # 寫入 Firebase
-        db.reference(f"leave_requests/{request_id}").set(leave_data)
+        # 寫入 Google Sheets
+        service_account_info = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
 
-        # 發送卡片給主管
-        send_leave_request_card(manager_data["manager_email"], leave_data)
+        sheet.append_row([
+            leave_data["request_id"],
+            leave_data["employee_email"],
+            leave_data["employee_name"],
+            leave_data["leave_type"],
+            leave_data["start_datetime"],
+            leave_data["end_datetime"],
+            leave_data["reason"],
+            leave_data["manager_email"],
+            leave_data["status"],
+            leave_data["reject_reason"],
+            leave_data["created_at"]
+        ])
+
+        # 發卡片給主管
+        send_leave_request_card(manager_employee_code, leave_data)
 
         return jsonify({"status": "ok", "request_id": request_id}), 200
 
@@ -284,34 +305,34 @@ def bot_callback_handler():
 
         elif event_type == INTERACTIVE_MESSAGE_CLICK:
             event_data = data.get("event", {})
-            raw_value = event_data.get("value", "{}")  # 直接從 event_data 取
+            raw_value = event_data.get("value", "{}")
             click_data = json.loads(raw_value)
-            
+
             action = click_data.get("action")
             request_id = click_data.get("request_id")
             reason = click_data.get("reason", "")
+
             print(f"互動點擊 - action: {action}, request_id: {request_id}, reason: {reason}")
 
             if not request_id:
                 return "", 200
 
-            # 從 Firebase 取出請假資料
-            leave_ref = db.reference(f"leave_requests/{request_id}")
-            leave_data = leave_ref.get()
+            # 開啟 Sheets
+            service_account_info = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
+            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+            creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+            gc = gspread.authorize(creds)
+            sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
 
-            if not leave_data:
+            # 找到對應行
+            row_num = find_row_by_request_id(sheet, request_id)
+            if not row_num:
                 print(f"找不到 request_id: {request_id}")
                 return "", 200
 
-            # 更新 Firebase 狀態
-            leave_ref.update({
-                "status": "approved" if action == "approve" else "rejected",
-                "reject_reason": reason,
-                "reviewed_at": time.strftime("%Y-%m-%d %H:%M:%S")
-            })
-
-            # 寫入 Google Sheets
-            write_to_sheets(leave_data, action, reason)
+            # 更新 status 和 reject_reason
+            sheet.update_cell(row_num, 9, "approved" if action == "approve" else "rejected")  # I欄
+            sheet.update_cell(row_num, 10, reason)  # J欄
 
             print(f"審核完成 - {request_id}: {action}")
 
