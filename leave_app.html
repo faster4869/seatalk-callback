@@ -6,7 +6,6 @@
   <title>請假申請</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* 補充預設變數，確保你的 UI 顏色能正確顯示 */
     :root {
       --bg: #f8fafc;
       --surface: #ffffff;
@@ -35,15 +34,10 @@
     .header-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 12px; }
     .header h1 { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
     .header h1 span { color: var(--accent); }
+    
+    /* 補回的 User Badge 樣式 */
     .user-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
     .user-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
-
-    /* Tabs */ 
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; animation: fadeUp 0.6s ease 0.1s both; }
-    .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 7px; transition: all 0.2s ease; border: none; background: transparent; }
-    .tab.active { background: var(--accent); color: white; }
-    .tab-content { display: none; } 
-    .tab-content.active { display: block; }
 
     /* Form */ 
     .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; animation: fadeUp 0.6s ease 0.2s both; }
@@ -54,53 +48,15 @@
     .form-control option { background: var(--surface2); }
     .form-row { display: grid; gap: 16px; }
     textarea.form-control { resize: vertical; min-height: 90px; }
+    
     .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; position: relative; overflow: hidden; }
     .submit-btn:hover { background: #ff8555; transform: translateY(-1px); }
     .submit-btn:active { transform: translateY(0); }
     .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* Status list & Others (保留你原本的樣式) */ 
-    .status-list { animation: fadeUp 0.6s ease 0.2s both; }
-    .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .status-title { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
-    .refresh-btn { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: 'DM Mono', monospace; }
-    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .leave-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; transition: border-color 0.2s; animation: fadeUp 0.4s ease both; }
-    .leave-card:hover { border-color: var(--text3); }
-    .leave-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .leave-type-badge { font-size: 13px; font-weight: 700; color: var(--text); }
-    .status-badge { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
-    .status-pending { background: rgba(240, 165, 0, 0.15); color: var(--pending); border: 1px solid rgba(240, 165, 0, 0.3); }
-    .status-approved { background: rgba(76, 175, 125, 0.15); color: var(--success); border: 1px solid rgba(76, 175, 125, 0.3); }
-    .status-rejected { background: rgba(224, 82, 82, 0.15); color: var(--danger); border: 1px solid rgba(224, 82, 82, 0.3); }
-    .leave-dates { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
-    .leave-reason { font-size: 13px; color: var(--text2); }
-    .reject-reason { margin-top: 8px; padding: 8px 12px; background: rgba(224, 82, 82, 0.08); border-left: 3px solid var(--danger); border-radius: 0 4px 4px 0; font-size: 12px; color: var(--danger); }
-    .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
-    .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
-    .empty-text { font-size: 14px; font-family: 'DM Mono', monospace; }
-
-    /* Toast & Loading */ 
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 13px; z-index: 100; transition: transform 0.3s ease; min-width: 260px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-    .toast.show { transform: translateX(-50%) translateY(0); }
-    .toast.success { border-color: var(--success); color: var(--success); }
-    .toast.error { border-color: var(--danger); color: var(--danger); }
-    .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
-
-    /* Login screen */ 
-    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
-    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; text-align: center; max-width: 380px; width: 90%; animation: fadeUp 0.6s ease; }
-    .login-logo { font-size: 36px; margin-bottom: 16px; }
-    .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 32px; line-height: 1.6; }
-    .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; background: white; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; }
-    .google-btn:hover { background: #f5f5f5; transform: translateY(-1px); }
-    .google-icon { width: 18px; height: 18px; }
-
     /* Keyframes */
     @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   </style>
 </head>
@@ -110,11 +66,26 @@
     <div class="header">
       <div class="header-tag">Leave Application</div>
       <h1>請假<span>申請</span></h1>
+      <div class="user-badge">
+        <div class="user-dot"></div>
+        <span id="userEmailDisplay">employee@yourcompany.com</span>
+      </div>
     </div>
 
     <div class="form-card">
-      <div class="form-row" style="grid-template-columns: 5fr 5fr 2fr;">
-        
+      
+      <div class="form-group">
+        <label class="form-label">假別</label>
+        <select class="form-control" id="leaveType">
+          <option value="annual">特別休假 (特休)</option>
+          <option value="personal">事假</option>
+          <option value="sick">病假</option>
+          <option value="official">公假</option>
+          <option value="compensatory">補休</option>
+        </select>
+      </div>
+
+      <div class="form-row" style="grid-template-columns: 1fr 1fr;">
         <div class="form-group">
           <label class="form-label">開始時間</label>
           <div style="display: flex; gap: 6px; align-items: center;">
@@ -140,14 +111,13 @@
             </select>
           </div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label class="form-label">Duration</label>
-          <div id="durationDisplay" style="height: 45px; display: flex; align-items: center; font-weight: 700; color: var(--accent); font-size: 15px;">
-            0 hrs
-          </div>
+      <div class="form-group">
+        <label class="form-label">Duration</label>
+        <div id="durationDisplay" style="height: 24px; display: flex; align-items: center; font-weight: 700; color: var(--accent); font-size: 16px;">
+          0 hrs
         </div>
-
       </div>
 
       <div class="form-group">
@@ -174,26 +144,25 @@
       const endHour = document.getElementById("endHour");
       
       for (let i = 0; i < 24; i++) {
-        let hourStr = i.toString().padStart(2, '0'); // 補零，例如 09
+        let hourStr = i.toString().padStart(2, '0'); // 補零
         startHour.add(new Option(hourStr, hourStr));
         endHour.add(new Option(hourStr, hourStr));
       }
       
-      // 預設選擇時間 (例如預設 09:00 到 18:00)
+      // 預設選擇時間
       startHour.value = "09";
       endHour.value = "18";
     }
 
     // 設定日期預設為今天
     function setDefaultDates() {
-      // 取得當地日期的正確 YYYY-MM-DD 格式
       const localDate = new Date();
       const offset = localDate.getTimezoneOffset() * 60000;
       const today = new Date(localDate.getTime() - offset).toISOString().split('T')[0];
       
       document.getElementById("startDate").value = today;
       document.getElementById("endDate").value = today;
-      calculateDuration(); // 初始計算一次
+      calculateDuration(); 
     }
 
     // 計算時數並更新畫面
@@ -208,9 +177,7 @@
 
       const display = document.getElementById("durationDisplay");
 
-      // 確保所有欄位都有值才計算
       if (startDate && endDate && startHour && endHour) {
-        // 組合回標準格式計算毫秒差
         const start = new Date(`${startDate}T${startHour}:${startMinute}:00`);
         const end = new Date(`${endDate}T${endHour}:${endMinute}:00`);
 
@@ -218,7 +185,7 @@
         const diffHours = diffMs / (1000 * 60 * 60);
 
         if (diffHours < 0) {
-          display.innerText = "時間錯誤";
+          display.innerText = "時間錯誤 (結束需晚於開始)";
           display.style.color = "var(--danger)";
         } else {
           display.innerText = `${diffHours} hrs`;
@@ -232,23 +199,25 @@
 
     // 送出申請邏輯
     function submitLeave() {
+      const leaveType = document.getElementById("leaveType");
+      const leaveTypeText = leaveType.options[leaveType.selectedIndex].text;
       const startTime = `${document.getElementById("startDate").value}T${document.getElementById("startHour").value}:${document.getElementById("startMinute").value}`;
       const endTime = `${document.getElementById("endDate").value}T${document.getElementById("endHour").value}:${document.getElementById("endMinute").value}`;
       const reason = document.getElementById("reason").value;
       const durationText = document.getElementById("durationDisplay").innerText;
 
-      if(durationText === "時間錯誤") {
+      if(durationText.includes("錯誤")) {
         alert("請確認結束時間晚於開始時間！");
         return;
       }
 
+      console.log("申請假別：", leaveTypeText);
       console.log("申請開始：", startTime);
       console.log("申請結束：", endTime);
-      console.log("請假原因：", reason);
       console.log("總計時數：", durationText);
+      console.log("請假原因：", reason);
       
-      alert("申請資料已輸出至控制台 (Console)！");
-      // ... 執行你後續呼叫 API 的邏輯 ...
+      alert(`已送出申請：\n假別：${leaveTypeText}\n時數：${durationText}\n請至 Console 查看詳細資訊！`);
     }
   </script>
 
