@@ -459,6 +459,9 @@ def bot_callback_handler():
             request_id = click_data.get("request_id")
             reason = click_data.get("reason", "")
 
+            # 取得該張卡片的 message_id
+            message_id = event_data.get("message_id")
+
             print(
                 f"互動點擊 - action: {action}, request_id: {request_id}, reason: {reason}"
             )
@@ -485,13 +488,65 @@ def bot_callback_handler():
                 print(f"找不到 request_id: {request_id}")
                 return "", 200
 
-            # 更新 status 和 reject_reason
+            # 讀取這行的原始資料 (為了把名字、時間重畫在新卡片上)
+            row_data = sheet.row_values(row_num)
+            employee_name = row_data[2] if len(row_data) > 2 else "未知"
+            leave_type = row_data[3] if len(row_data) > 3 else "未知"
+            start_dt = row_data[4] if len(row_data) > 4 else "未知"
+            end_dt = row_data[5] if len(row_data) > 5 else "未知"
+
+            # 更新 status 和 reject_reason (寫入 Google Sheets)
             sheet.update_cell(
                 row_num, 9, "approved" if action == "approve" else "rejected"
             )  # I欄
             sheet.update_cell(row_num, 10, reason)  # J欄
 
             print(f"審核完成 - {request_id}: {action}")
+
+            # ==========================================
+            # 新增：動態更新原本的卡片 (把按鈕拔掉，換成結果文字)
+            # ==========================================
+            if message_id:
+                if action == "approve":
+                    status_text = "✅ **已核准 (Approve)**"
+                else:
+                    status_text = f"❌ **已拒絕** (原因：{reason})"
+
+                # 建立一張「沒有按鈕」的新卡片
+                updated_card = {
+                    "elements": [
+                        {
+                            "element_type": "title",
+                            "title": {"text": "📋 請假審核申請 (已處理)"},
+                        },
+                        {
+                            "element_type": "description",
+                            "description": {
+                                "format": 1,
+                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n➖➖➖➖➖➖\n**審核結果**：{status_text}",
+                            },
+                        },
+                    ]
+                }
+
+                access_token = get_access_token()
+                update_payload = {
+                    "message_id": message_id,
+                    "interactive_message": updated_card,
+                }
+
+                # 呼叫 SeaTalk 的「更新卡片 API」
+                res = requests.put(
+                    "https://openapi.seatalk.io/messaging/v2/interactive_message",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json",
+                    },
+                    json=update_payload,
+                )
+                print(f"Update card response: {res.json()}")
+
+            return "", 200
 
         # 以下維持原本邏輯不動
         elif event_type == NEW_BOT_SUBSCRIBER:
