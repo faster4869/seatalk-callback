@@ -285,6 +285,7 @@ def bot_callback_handler():
         elif event_type == INTERACTIVE_MESSAGE_CLICK:
             event_data = data.get("event", {})
             # 取得按鈕的 value（我們塞的 JSON 字串）
+            print(f"CLICK event_data: {json.dumps(event_data)}")  # 加這行
             raw_value = event_data.get("interactive_info", {}).get("value", "{}")
             click_data = json.loads(raw_value)
 
