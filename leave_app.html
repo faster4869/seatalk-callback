@@ -351,7 +351,23 @@
   function handleGoogleLogin() {
     window.location.href = `${API_BASE}/auth/login?redirect=${encodeURIComponent(window.location.href)}`;
   }
-
+  
+  // ── Logout ────────────────────────────────────────────
+  function logout() {
+    // 彈出確認視窗，防止手滑誤觸
+    if (confirm(`目前的帳號是：\n${currentUser.email}\n\n確定要登出並回到登入畫面嗎？`)) {
+      // 清除 localStorage 記憶的帳號
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      currentUser = null;
+      
+      // 清除網址列參數（避免重新整理又自動登入）
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // 切換回登入頁
+      showLogin();
+    }
+  }
   function checkAuth() {
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email') || localStorage.getItem('user_email');
