@@ -1,87 +1,531 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>請假申請</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface2: #f1f5f9;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --text2: #64748b;
-      --text3: #94a3b8;
-      --accent: #f97316;
-      --success: #10b981;
-      --danger: #ef4444;
-      --pending: #f59e0b;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>請假申請系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #ff6b35;
+    --accent2: #ffb347;
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --success: #4caf7d;
+    --danger: #e05252;
+    --pending: #f0a500;
+  }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-    /* Background grid */ 
-    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.3; pointer-events: none; z-index: 0; }
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    .container { max-width: 640px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 1; }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
 
-    /* Header */ 
-    .header { margin-bottom: 40px; animation: fadeDown 0.6s ease; }
-    .header-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 12px; }
-    .header h1 { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
-    .header h1 span { color: var(--accent); }
-    
-    /* 補回的 User Badge 樣式 */
-    .user-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
-    .user-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+    animation: fadeDown 0.6s ease;
+  }
 
-    /* Form */ 
-    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; animation: fadeUp 0.6s ease 0.2s both; }
-    .form-group { margin-bottom: 20px; }
-    .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
-    .form-control { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans TC', sans-serif; transition: border-color 0.2s; outline: none; appearance: none; }
-    .form-control:focus { border-color: var(--accent); }
-    .form-control option { background: var(--surface2); }
-    .form-row { display: grid; gap: 16px; }
-    textarea.form-control { resize: vertical; min-height: 90px; }
-    
-    .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; position: relative; overflow: hidden; }
-    .submit-btn:hover { background: #ff8555; transform: translateY(-1px); }
-    .submit-btn:active { transform: translateY(0); }
-    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .header-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
 
-    /* Keyframes */
-    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-  </style>
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span {
+    color: var(--accent);
+  }
+
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .user-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Form */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    transition: border-color 0.2s;
+    outline: none;
+    appearance: none;
+    color-scheme: dark; /* 確保原生的 date picker 在深色模式顯示正確 */
+  }
+
+  .form-control:focus {
+    border-color: var(--accent);
+  }
+
+  .form-control option {
+    background: var(--surface2);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  textarea.form-control {
+    resize: vertical;
+    min-height: 90px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .submit-btn:hover {
+    background: #ff8555;
+    transform: translateY(-1px);
+  }
+
+  .submit-btn:active {
+    transform: translateY(0);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Status list */
+  .status-list {
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .status-title {
+    font-size: 13px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .refresh-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .leave-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .leave-card:hover {
+    border-color: var(--text3);
+  }
+
+  .leave-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .leave-type-badge {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .status-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .status-pending {
+    background: rgba(240, 165, 0, 0.15);
+    color: var(--pending);
+    border: 1px solid rgba(240, 165, 0, 0.3);
+  }
+
+  .status-approved {
+    background: rgba(76, 175, 125, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(76, 175, 125, 0.3);
+  }
+
+  .status-rejected {
+    background: rgba(224, 82, 82, 0.15);
+    color: var(--danger);
+    border: 1px solid rgba(224, 82, 82, 0.3);
+  }
+
+  .leave-dates {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .leave-reason {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .reject-reason {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(224, 82, 82, 0.08);
+    border-left: 3px solid var(--danger);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+    color: var(--danger);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .empty-text {
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    min-width: 260px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* Loading */
+  .loading {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  /* Login screen */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    animation: fadeUp 0.6s ease;
+  }
+
+  .login-logo {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+
+  .login-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .login-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px;
+    background: white;
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+
+  .google-btn:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+  }
+
+  .google-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="header">
-      <div class="header-tag">Leave Application</div>
-      <h1>請假<span>申請</span></h1>
-      <div class="user-badge">
-        <div class="user-dot"></div>
-        <span id="userEmailDisplay">employee@yourcompany.com</span>
-      </div>
-    </div>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">📋</div>
+    <div class="login-title">請假申請系統</div>
+    <div class="login-sub">使用您的 Google 帳號登入<br>以送出請假申請或查看審核狀態</div>
+    <button class="google-btn" onclick="handleGoogleLogin()">
+      <svg class="google-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      使用 Google 帳號登入
+    </button>
+  </div>
+</div>
 
+<div class="container" id="mainApp" style="display:none">
+  <div class="header">
+    <div class="header-tag">Leave Management</div>
+    <h1>請假<span>申請</span>系統</h1>
+    <div class="user-badge">
+      <div class="user-dot"></div>
+      <span id="userEmail">載入中...</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('apply')">📝 送出申請</button>
+    <button class="tab" onclick="switchTab('status')">📊 申請狀態</button>
+  </div>
+
+  <div class="tab-content active" id="tab-apply">
     <div class="form-card">
-      
       <div class="form-group">
         <label class="form-label">假別</label>
         <select class="form-control" id="leaveType">
-          <option value="annual">特別休假 (特休)</option>
-          <option value="personal">事假</option>
-          <option value="sick">病假</option>
-          <option value="official">公假</option>
-          <option value="compensatory">補休</option>
+          <option value="">請選擇假別</option>
+          <option value="特休">特休</option>
+          <option value="事假">事假</option>
+          <option value="病假">病假</option>
+          <option value="生理假">生理假</option>
+          <option value="婚假">婚假</option>
+          <option value="喪假">喪假</option>
         </select>
       </div>
 
@@ -131,95 +575,228 @@
     </div>
   </div>
 
-  <script>
-    // 網頁載入時自動執行
-    document.addEventListener("DOMContentLoaded", function() {
-      populateHours();
-      setDefaultDates();
-    });
+  <div class="tab-content" id="tab-status">
+    <div class="status-list">
+      <div class="status-header">
+        <span class="status-title">我的申請記錄</span>
+        <button class="refresh-btn" onclick="loadLeaveStatus()">↻ 重新整理</button>
+      </div>
+      <div id="leaveList">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-text">載入中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // 自動產生 00~23 的下拉選單選項
-    function populateHours() {
-      const startHour = document.getElementById("startHour");
-      const endHour = document.getElementById("endHour");
-      
-      for (let i = 0; i < 24; i++) {
-        let hourStr = i.toString().padStart(2, '0'); // 補零
-        startHour.add(new Option(hourStr, hourStr));
-        endHour.add(new Option(hourStr, hourStr));
-      }
-      
-      // 預設選擇時間
-      startHour.value = "09";
-      endHour.value = "18";
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_BASE = 'https://seatalk-callback.onrender.com';
+  let currentUser = null;
+
+  // 初始化畫面
+  document.addEventListener("DOMContentLoaded", function() {
+    populateHours();
+    setDefaultDates();
+    checkAuth();
+  });
+
+  // 自動產生 00~23 的選項
+  function populateHours() {
+    const startHour = document.getElementById("startHour");
+    const endHour = document.getElementById("endHour");
+    for (let i = 0; i < 24; i++) {
+      let hourStr = i.toString().padStart(2, '0');
+      startHour.add(new Option(hourStr, hourStr));
+      endHour.add(new Option(hourStr, hourStr));
     }
+    startHour.value = "09";
+    endHour.value = "18";
+  }
 
-    // 設定日期預設為今天
-    function setDefaultDates() {
-      const localDate = new Date();
-      const offset = localDate.getTimezoneOffset() * 60000;
-      const today = new Date(localDate.getTime() - offset).toISOString().split('T')[0];
-      
-      document.getElementById("startDate").value = today;
-      document.getElementById("endDate").value = today;
-      calculateDuration(); 
-    }
+  // 預設日期為今天
+  function setDefaultDates() {
+    const localDate = new Date();
+    const offset = localDate.getTimezoneOffset() * 60000;
+    const today = new Date(localDate.getTime() - offset).toISOString().split('T')[0];
+    document.getElementById("startDate").value = today;
+    document.getElementById("endDate").value = today;
+    calculateDuration(); 
+  }
 
-    // 計算時數並更新畫面
-    function calculateDuration() {
-      const startDate = document.getElementById("startDate").value;
-      const startHour = document.getElementById("startHour").value;
-      const startMinute = document.getElementById("startMinute").value;
+  // 計算請假時數
+  function calculateDuration() {
+    const startDate = document.getElementById("startDate").value;
+    const startHour = document.getElementById("startHour").value;
+    const startMinute = document.getElementById("startMinute").value;
+    const endDate = document.getElementById("endDate").value;
+    const endHour = document.getElementById("endHour").value;
+    const endMinute = document.getElementById("endMinute").value;
+    const display = document.getElementById("durationDisplay");
 
-      const endDate = document.getElementById("endDate").value;
-      const endHour = document.getElementById("endHour").value;
-      const endMinute = document.getElementById("endMinute").value;
+    if (startDate && endDate && startHour && endHour) {
+      const start = new Date(`${startDate}T${startHour}:${startMinute}:00`);
+      const end = new Date(`${endDate}T${endHour}:${endMinute}:00`);
+      const diffMs = end - start;
+      const diffHours = diffMs / (1000 * 60 * 60);
 
-      const display = document.getElementById("durationDisplay");
-
-      if (startDate && endDate && startHour && endHour) {
-        const start = new Date(`${startDate}T${startHour}:${startMinute}:00`);
-        const end = new Date(`${endDate}T${endHour}:${endMinute}:00`);
-
-        const diffMs = end - start;
-        const diffHours = diffMs / (1000 * 60 * 60);
-
-        if (diffHours < 0) {
-          display.innerText = "時間錯誤 (結束需晚於開始)";
-          display.style.color = "var(--danger)";
-        } else {
-          display.innerText = `${diffHours} hrs`;
-          display.style.color = "var(--accent)";
-        }
+      if (diffHours < 0) {
+        display.innerText = "時間錯誤 (結束需晚於開始)";
+        display.style.color = "var(--danger)";
       } else {
-        display.innerText = "0 hrs";
-        display.style.color = "var(--text2)";
+        display.innerText = `${diffHours} hrs`;
+        display.style.color = "var(--accent)";
       }
+    } else {
+      display.innerText = "0 hrs";
+      display.style.color = "var(--text2)";
+    }
+  }
+
+  // ── Google OAuth ──────────────────────────────────────
+  function handleGoogleLogin() {
+    window.location.href = `${API_BASE}/auth/login?redirect=${encodeURIComponent(window.location.href)}`;
+  }
+
+  function checkAuth() {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email') || localStorage.getItem('user_email');
+    const name = params.get('name') || localStorage.getItem('user_name');
+
+    if (email) {
+      localStorage.setItem('user_email', email);
+      if (name) localStorage.setItem('user_name', name);
+      currentUser = { email, name: name || email.split('@')[0] };
+      showApp();
+    } else {
+      showLogin();
+    }
+  }
+
+  function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('userEmail').textContent = currentUser.email;
+  }
+
+  function showLogin() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+
+  // ── Tabs ──────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'apply') || (i === 1 && tab === 'status'));
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    if (tab === 'status') loadLeaveStatus();
+  }
+
+  // ── Submit Leave ──────────────────────────────────────
+  async function submitLeave() {
+    const leaveType = document.getElementById('leaveType').value;
+    const startDate = document.getElementById('startDate').value;
+    const startHour = document.getElementById('startHour').value;
+    const startMinute = document.getElementById('startMinute').value;
+    const endDate = document.getElementById('endDate').value;
+    const endHour = document.getElementById('endHour').value;
+    const endMinute = document.getElementById('endMinute').value;
+    const reason = document.getElementById('reason').value;
+    const durationText = document.getElementById("durationDisplay").innerText;
+
+    if (!leaveType || !startDate || !endDate || !reason) {
+      showToast('請填寫所有欄位', 'error');
+      return;
     }
 
-    // 送出申請邏輯
-    function submitLeave() {
-      const leaveType = document.getElementById("leaveType");
-      const leaveTypeText = leaveType.options[leaveType.selectedIndex].text;
-      const startTime = `${document.getElementById("startDate").value}T${document.getElementById("startHour").value}:${document.getElementById("startMinute").value}`;
-      const endTime = `${document.getElementById("endDate").value}T${document.getElementById("endHour").value}:${document.getElementById("endMinute").value}`;
-      const reason = document.getElementById("reason").value;
-      const durationText = document.getElementById("durationDisplay").innerText;
+    if (durationText.includes('錯誤')) {
+      showToast('結束時間必須晚於開始時間', 'error');
+      return;
+    }
 
-      if(durationText.includes("錯誤")) {
-        alert("請確認結束時間晚於開始時間！");
+    // 組合給後端的日期字串
+    const startDatetime = `${startDate} ${startHour}:${startMinute}:00`;
+    const endDatetime = `${endDate} ${endHour}:${endMinute}:00`;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>送出中...';
+
+    try {
+      const res = await fetch(`${API_BASE}/leave/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_email: currentUser.email,
+          employee_name: currentUser.name,
+          leave_type: leaveType,
+          start_datetime: startDatetime,
+          end_datetime: endDatetime,
+          reason
+        })
+      });
+
+      const data = await res.json();
+      if (data.status === 'ok') {
+        showToast('申請送出成功！等待主管審核', 'success');
+        document.getElementById('leaveType').value = '';
+        document.getElementById('reason').value = '';
+        setDefaultDates(); // 恢復預設時間
+      } else {
+        showToast(data.message || '送出失敗，請稍後再試', 'error');
+      }
+    } catch (e) {
+      showToast('網路錯誤，請稍後再試', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '送出申請';
+  }
+
+  // ── Load Status ───────────────────────────────────────
+  async function loadLeaveStatus() {
+    const list = document.getElementById('leaveList');
+    list.innerHTML = '<div class="empty-state"><div class="empty-text">載入中...</div></div>';
+
+    try {
+      const res = await fetch(`${API_BASE}/leave/list?email=${encodeURIComponent(currentUser.email)}`);
+      const data = await res.json();
+
+      if (!data.records || data.records.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">尚無申請記錄</div></div>';
         return;
       }
 
-      console.log("申請假別：", leaveTypeText);
-      console.log("申請開始：", startTime);
-      console.log("申請結束：", endTime);
-      console.log("總計時數：", durationText);
-      console.log("請假原因：", reason);
-      
-      alert(`已送出申請：\n假別：${leaveTypeText}\n時數：${durationText}\n請至 Console 查看詳細資訊！`);
+      list.innerHTML = data.records.reverse().map((r, i) => `
+        <div class="leave-card" style="animation-delay:${i * 0.05}s">
+          <div class="leave-card-top">
+            <div class="leave-type-badge">${r.leave_type}</div>
+            <div class="status-badge status-${r.status}">
+              ${{ pending: '審核中', approved: '已核准', rejected: '已拒絕' }[r.status] || r.status}
+            </div>
+          </div>
+          <div class="leave-dates">${r.start_datetime} ～ ${r.end_datetime}</div>
+          <div class="leave-reason">${r.reason}</div>
+          ${r.status === 'rejected' && r.reject_reason ? `<div class="reject-reason">拒絕原因：${r.reject_reason}</div>` : ''}
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">載入失敗</div></div>';
     }
-  </script>
+  }
 
+  // ── Toast ─────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
 </body>
 </html>
