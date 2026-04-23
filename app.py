@@ -66,13 +66,8 @@ def get_employee_code(email: str, access_token: str) -> str:
     print(f"get_employee_code response: {data}")
     return data.get("employee_code")
 
-def send_leave_request_card(manager_email: str, leave_data: dict):
-    """發送請假審核互動卡片給主管"""
-    
-    access_token = get_access_token()
-    bot_id = os.environ.get("SEATALK_BOT_ID")
-    print(f"sending payload: bot_id={bot_id}, to_email={manager_email}")
-    card = {
+def build_leave_card(leave_data: dict) -> dict:
+    return {
         "config": {"wide_screen_mode": True},
         "header": {
             "title": {"tag": "plain_text", "content": "📋 請假審核申請"},
@@ -119,9 +114,17 @@ def send_leave_request_card(manager_email: str, leave_data: dict):
         ]
     }
 
+def send_leave_request_card(manager_employee_code: str, leave_data: dict):
+    """發送請假審核互動卡片給主管"""
+    access_token = get_access_token()
+    bot_id = os.environ.get("SEATALK_BOT_ID")
+    print(f"sending payload: bot_id={bot_id}, to_employee_code={manager_employee_code}")
+
+    card = build_leave_card(leave_data)
+
     payload = {
         "bot_id": bot_id,
-        "to_email": manager_email,
+        "to_employee_code": manager_employee_code,
         "message_type": "interactive_card",
         "content": json.dumps(card)
     }
