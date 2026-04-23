@@ -172,14 +172,11 @@ def write_to_sheets(leave_data: dict, action: str, reason: str):
 # =====================
 @app.route("/leave/apply/test", methods=["POST"])
 def leave_apply_test():
-    """測試用：不查 Firebase，直接發卡片"""
     try:
-        # 假資料，不需要 Firebase
         leave_data = {
             "request_id": f"LEAVE_{int(time.time())}",
             "employee_email": "chris.chouyh@shopee.com",
             "employee_name": "Chris",
-            "manager_email": "chris.chouyh@shopee.com",  # 先發給自己測試
             "leave_type": "特休",
             "start_datetime": "2026-05-01 09:00",
             "end_datetime": "2026-05-01 18:00",
@@ -188,7 +185,27 @@ def leave_apply_test():
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        result = send_leave_request_card(leave_data["manager_email"], leave_data)
+        access_token = get_access_token()
+        bot_id = os.environ.get("SEATALK_BOT_ID")
+        card = build_leave_card(leave_data)  
+
+        payload = {
+            "bot_id": bot_id,
+            "to_employee_code": "247857",  # 直接硬寫
+            "message_type": "interactive_card",
+            "content": json.dumps(card)
+        }
+
+        response = requests.post(
+            "https://openapi.seatalk.io/messaging/v2/bot/send_single_chat",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            },
+            json=payload
+        )
+        result = response.json()
+        print(f"send card result: {result}")
         return jsonify({"status": "ok", "seatalk_response": result}), 200
 
     except Exception as e:
