@@ -182,18 +182,50 @@
     background: var(--surface2);
   }
 
-  /* RWD 響應式網格設定 */
   .form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 預設為雙欄 */
+    grid-template-columns: 1fr 1fr;
     gap: 16px;
   }
 
-  /* 當螢幕寬度小於 480px (手機) 時，改為單欄排列 */
+  /* 時間選單專屬容器 */
+  .time-wrapper {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* 讓日期輸入框自動佔滿剩餘空間 */
+  .time-wrapper input[type="date"] {
+    flex: 1; 
+  }
+
+  /* 時、分下拉選單保持適當寬度 */
+  .time-wrapper select {
+    padding: 12px 4px;
+    min-width: 50px;
+  }
+
+  /* 手機版排版調整 (小於 480px) */
   @media (max-width: 480px) {
     .form-row {
       grid-template-columns: 1fr;
       gap: 12px;
+    }
+    
+    .time-wrapper {
+      gap: 4px; /* 縮小元素間隔 */
+    }
+    
+    .time-wrapper input[type="date"] {
+      padding: 12px 6px; /* 縮小日期兩側留白，避免字體被擠到換行 */
+      font-size: 13px; /* 微調字體大小以適應「年月日」 */
+    }
+
+    .time-wrapper select {
+      padding: 12px 2px; /* 縮小下拉選單的 padding */
+      min-width: 44px; /* 縮小最小寬度 */
+      font-size: 13px;
     }
   }
 
@@ -235,257 +267,51 @@
   }
 
   /* Status list */
-  .status-list {
-    animation: fadeUp 0.6s ease 0.2s both;
-  }
+  .status-list { animation: fadeUp 0.6s ease 0.2s both; }
+  .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .status-title { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .refresh-btn { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: 'DM Mono', monospace; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  
+  .leave-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; transition: border-color 0.2s; animation: fadeUp 0.4s ease both; }
+  .leave-card:hover { border-color: var(--text3); }
+  .leave-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .leave-type-badge { font-size: 13px; font-weight: 700; color: var(--text); }
+  
+  .status-badge { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .status-pending { background: rgba(240, 165, 0, 0.15); color: var(--pending); border: 1px solid rgba(240, 165, 0, 0.3); }
+  .status-approved { background: rgba(76, 175, 125, 0.15); color: var(--success); border: 1px solid rgba(76, 175, 125, 0.3); }
+  .status-rejected { background: rgba(224, 82, 82, 0.15); color: var(--danger); border: 1px solid rgba(224, 82, 82, 0.3); }
+  
+  .leave-dates { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .leave-reason { font-size: 13px; color: var(--text2); }
+  .reject-reason { margin-top: 8px; padding: 8px 12px; background: rgba(224, 82, 82, 0.08); border-left: 3px solid var(--danger); border-radius: 0 4px 4px 0; font-size: 12px; color: var(--danger); }
+  
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-text { font-size: 14px; font-family: 'DM Mono', monospace; }
 
-  .status-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-
-  .status-title {
-    font-size: 13px;
-    color: var(--text2);
-    font-family: 'DM Mono', monospace;
-  }
-
-  .refresh-btn {
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text2);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .refresh-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .leave-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
-    margin-bottom: 12px;
-    transition: border-color 0.2s;
-    animation: fadeUp 0.4s ease both;
-  }
-
-  .leave-card:hover {
-    border-color: var(--text3);
-  }
-
-  .leave-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-  }
-
-  .leave-type-badge {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .status-badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    padding: 3px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .status-pending {
-    background: rgba(240, 165, 0, 0.15);
-    color: var(--pending);
-    border: 1px solid rgba(240, 165, 0, 0.3);
-  }
-
-  .status-approved {
-    background: rgba(76, 175, 125, 0.15);
-    color: var(--success);
-    border: 1px solid rgba(76, 175, 125, 0.3);
-  }
-
-  .status-rejected {
-    background: rgba(224, 82, 82, 0.15);
-    color: var(--danger);
-    border: 1px solid rgba(224, 82, 82, 0.3);
-  }
-
-  .leave-dates {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: var(--text2);
-    margin-bottom: 6px;
-  }
-
-  .leave-reason {
-    font-size: 13px;
-    color: var(--text2);
-  }
-
-  .reject-reason {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: rgba(224, 82, 82, 0.08);
-    border-left: 3px solid var(--danger);
-    border-radius: 0 4px 4px 0;
-    font-size: 12px;
-    color: var(--danger);
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text3);
-  }
-
-  .empty-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
-    opacity: 0.5;
-  }
-
-  .empty-text {
-    font-size: 14px;
-    font-family: 'DM Mono', monospace;
-  }
-
-  /* Toast */
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 20px;
-    font-size: 13px;
-    z-index: 100;
-    transition: transform 0.3s ease;
-    min-width: 260px;
-    text-align: center;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  }
-
-  .toast.show {
-    transform: translateX(-50%) translateY(0);
-  }
-
+  /* Toast & Loading */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 13px; z-index: 100; transition: transform 0.3s ease; min-width: 260px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.success { border-color: var(--success); color: var(--success); }
   .toast.error { border-color: var(--danger); color: var(--danger); }
-
-  /* Loading */
-  .loading {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-    margin-right: 8px;
-  }
+  .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
 
   /* Login screen */
-  .login-screen {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-  }
+  .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; text-align: center; max-width: 380px; width: 90%; animation: fadeUp 0.6s ease; }
+  .login-logo { font-size: 36px; margin-bottom: 16px; }
+  .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 32px; line-height: 1.6; }
+  .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; background: white; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; }
+  .google-btn:hover { background: #f5f5f5; transform: translateY(-1px); }
+  .google-icon { width: 18px; height: 18px; }
 
-  .login-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 48px 40px;
-    text-align: center;
-    max-width: 380px;
-    width: 90%;
-    animation: fadeUp 0.6s ease;
-  }
-
-  .login-logo {
-    font-size: 36px;
-    margin-bottom: 16px;
-  }
-
-  .login-title {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .login-sub {
-    font-size: 13px;
-    color: var(--text2);
-    margin-bottom: 32px;
-    line-height: 1.6;
-  }
-
-  .google-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px;
-    background: white;
-    color: #333;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Noto Sans TC', sans-serif;
-  }
-
-  .google-btn:hover {
-    background: #f5f5f5;
-    transform: translateY(-1px);
-  }
-
-  .google-icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  @keyframes fadeDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 </style>
 </head>
 <body>
@@ -540,11 +366,11 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">開始時間</label>
-          <div style="display: flex; gap: 6px; align-items: center;">
+          <div class="time-wrapper">
             <input type="date" class="form-control" id="startDate" onchange="calculateDuration()">
-            <select class="form-control" id="startHour" onchange="calculateDuration()" style="padding: 12px 4px; min-width: 50px;"></select>
+            <select class="form-control" id="startHour" onchange="calculateDuration()"></select>
             <span style="font-weight: bold; color: var(--text2);">:</span>
-            <select class="form-control" id="startMinute" onchange="calculateDuration()" style="padding: 12px 4px; min-width: 55px;">
+            <select class="form-control" id="startMinute" onchange="calculateDuration()">
               <option value="00">00</option>
               <option value="30">30</option>
             </select>
@@ -553,11 +379,11 @@
         
         <div class="form-group">
           <label class="form-label">結束時間</label>
-          <div style="display: flex; gap: 6px; align-items: center;">
+          <div class="time-wrapper">
             <input type="date" class="form-control" id="endDate" onchange="calculateDuration()">
-            <select class="form-control" id="endHour" onchange="calculateDuration()" style="padding: 12px 4px; min-width: 50px;"></select>
+            <select class="form-control" id="endHour" onchange="calculateDuration()"></select>
             <span style="font-weight: bold; color: var(--text2);">:</span>
-            <select class="form-control" id="endMinute" onchange="calculateDuration()" style="padding: 12px 4px; min-width: 55px;">
+            <select class="form-control" id="endMinute" onchange="calculateDuration()">
               <option value="00">00</option>
               <option value="30">30</option>
             </select>
