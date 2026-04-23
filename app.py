@@ -292,9 +292,153 @@ def bot_callback_handler():
             print("Bot removed from group chat event received.")
             pass
 
-        elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
-            # 維持你原本的完整邏輯，這裡省略不重複貼
-            pass
+                elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
+            # Handle new mentioned message in group chat.
+            # Example: Process the mention and respond to the user.
+            group_id = data["event"]["group_id"]
+            plain_text = data["event"]["message"]["text"]["plain_text"]
+            thread_id = data["event"]["message"]["message_id"]
+            print("New mentioned message in group chat received.")
+            print(f"收到的CallBack內容:\n{data}")
+        
+            # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
+            if plain_text.strip().startswith('(Production)'):
+                # 使用 \n 分割字串，並過濾出指定開頭的行
+                lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Order SN', '出貨失敗 TN'))]
+            
+                data_dict = {}
+                for line in lines:
+                    if line.startswith("Order SN"):
+                        data_dict["OSN"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                    elif line.startswith("出貨失敗 TN"):
+                        data_dict["TN"] = line.split("：", 1)[1]
+            
+                new_data = [data_dict]
+                add_err_order(new_data)
+
+                #group_id = "NzMwNTUzMTAzMzg3"
+                bot_reply('販賣機Err清單已更新成功', group_id, thread_id)
+
+            elif plain_text.strip().startswith('Hi Team'):
+                 lines = [line.strip() for line in plain_text.split('\n') if line.strip().startswith(('Seller Type', 'Return Status','Return Reason', 'Seller Username'))]
+
+                 data_dict = {}
+
+                 for line in lines:
+                     if line.startswith("Seller Type"):
+                            data_dict["Seller Type"] = line.split("：", 1)[1]  # 取冒號後面的部分
+
+                     elif line.startswith("Return Status"):
+                            normalized_line = line.replace("：", ":").strip()
+                            data_dict["Return Status"] = normalized_line.split(":", 1)[1].strip()
+
+                     elif line.startswith("Return Reason"):
+                            normalized_line = line.replace("：", ":").strip()
+                            data_dict["Return Reason"] = normalized_line.split(":", 1)[1].strip()
+
+                     elif line.startswith("Seller Username"):
+                            normalized_line = line.replace("：", ":").strip()
+                            data_dict["Seller Username"] = normalized_line.split(":", 1)[1].strip()
+
+                 special_seller_list = [
+                    "fe_amart",
+                    "digitalcitytw",
+                    "senao.tw",
+                    "daikin_senao",
+                    "samsung_he",
+                    "sakuyo_Japan",
+                    "bianco_senao",
+                    "MegaKing_senao",
+                    "panasonic_senao",
+                    "shopee_pass",
+                    "esim_go",
+                    "shopee24h",
+                    "shopee24h_hb",
+                    "shopee24h_el",
+                    "asus_official_store",
+                    "outsourcing_24h",
+                    "thebestofkaohsiung",
+                    "foodie.select",
+                    "game_official",
+                    "game_quick",
+                    "google.tw",
+                    "oppo_official",
+                    "realmetw",
+                    "shopee_consumables",
+                    "sp_games",
+                    "ticket_service",
+                    "topbrandtw",
+                    "shopee_choice_hl",
+                    "apple.tw",
+                    "asiawifi"
+                ]
+                 flow = "" #初始化flow變數
+                 mention_tag = ""#初始化mention_tag變數
+
+                 print(f"解析後的資料字典: {data_dict}")
+                 if "Requested" in data_dict.get("Return Status", "").strip():
+                     
+                     mention_tag = "<mention-tag target=\"seatalk://user?email=ziv.hung@shopee.com\"/><mention-tag target=\"seatalk://user?email=sharon.chuic@shopee.com\"/>"
+                     content = f'{mention_tag}\n此案件需協助推送到Judging，請PIC協助確認案件內容!'
+                     bot_reply(content, group_id, thread_id)
+
+                 elif "Judging" in data_dict.get("Return Status", "").strip() or "Processing" in data_dict.get("Return Status", "").strip():
+                    if data_dict.get("Seller Username", "").strip() in special_seller_list:
+                        flow = "Mall 特賣"
+                        mention_tag = "<mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/><mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/>"
+                        content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                        bot_reply(content, group_id, thread_id)
+
+                    else:
+                        reason = data_dict.get("Return Reason", "").strip()
+                        if "包裹未送達／無法取件" in reason:
+                            flow = "Flow A"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=vivian.liu@shopee.com\"/><mention-tag target=\"seatalk://user?email=lynne.chung@shopee.com\"/>"
+                            content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                            bot_reply(content, group_id, thread_id)
+
+                        elif "商品缺件／賣家通知缺貨" in reason:
+                            flow = "Flow B"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=tina.tang@shopee.com\"/><mention-tag target=\"seatalk://user?email=jennifer.su@shopee.com\"/>"
+                            content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                            bot_reply(content, group_id, thread_id)
+                        else:
+                            flow = "Flow C"
+                            mention_tag = "<mention-tag target=\"seatalk://user?email=sharon.chuic@shopee.com\"/><mention-tag target=\"seatalk://user?email=ziv.hung@shopee.com\"/>"
+                            content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                            bot_reply(content, group_id, thread_id)
+                
+                 elif "Accepted" in data_dict.get("Return Status", "").strip() or "Seller dispute" in data_dict.get("Return Status", "").strip() or "Seller Dispute" in data_dict.get("Return Status", "").strip():
+
+                     if "C2C" in data_dict.get("Seller Type", "").strip():
+                         flow = "C2C Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=alice.cheng@shopee.com\"/><mention-tag target=\"seatalk://user?email=janice.lin@shopee.com\"/>"
+                         content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                         bot_reply(content, group_id, thread_id)
+
+                     elif "Mall" in data_dict.get("Seller Type", "").strip():
+                         flow = "Mall Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=shin.lee@shopee.com\"/>"
+                         #移除Amelie，待後續加上
+                         content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                         bot_reply(content, group_id, thread_id)
+
+                     elif "CB" in data_dict.get("Seller Type", "").strip():
+                         flow = "CB Dispute"
+                         mention_tag = "<mention-tag target=\"seatalk://user?email=queenie.chien@shopee.com\"/><mention-tag target=\"seatalk://user?email=winnie.hsu@shopee.com\"/>"
+                         content = f'{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!'
+                         bot_reply(content, group_id, thread_id)
+                     
+                 else:   
+                    content = f'Return Status內容有誤，無法判定通知對象，請重新確認格式'
+                    bot_reply(content, group_id, thread_id)
+
+
+                
+            else:
+
+                content = '訊息內容未以指定關鍵字開頭，請重新確認格式'
+                bot_reply(content, group_id, thread_id)
 
         else:
             print(f"Unknown event type: {event_type}")
