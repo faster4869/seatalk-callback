@@ -183,18 +183,39 @@ def leave_apply_test():
             "request_id": f"LEAVE_{int(time.time())}",
             "employee_email": "chris.chouyh@shopee.com",
             "employee_name": "Chris",
+            "manager_email": "chris.chouyh@shopee.com",
             "leave_type": "特休",
             "start_datetime": "2026-05-01 09:00",
             "end_datetime": "2026-05-01 18:00",
             "reason": "家庭因素",
             "status": "pending",
+            "reject_reason": "",
             "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
 
+        # 寫入 Sheets
+        service_account_info = json.loads(os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON"))
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
+        sheet.append_row([
+            leave_data["request_id"],
+            leave_data["employee_email"],
+            leave_data["employee_name"],
+            leave_data["leave_type"],
+            leave_data["start_datetime"],
+            leave_data["end_datetime"],
+            leave_data["reason"],
+            leave_data["manager_email"],
+            leave_data["status"],
+            leave_data["reject_reason"],
+            leave_data["created_at"]
+        ])
+
+        # 發卡片
         access_token = get_access_token()
         bot_id = os.environ.get("SEATALK_BOT_ID")
-        card = build_leave_card(leave_data)  
-
         payload = {
             "employee_code": "247857",
             "message": {
@@ -203,13 +224,9 @@ def leave_apply_test():
             },
             "usable_platform": "mobile"
         }
-
         response = requests.post(
             "https://openapi.seatalk.io/messaging/v2/single_chat",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
             json=payload
         )
         result = response.json()
@@ -219,7 +236,7 @@ def leave_apply_test():
     except Exception as e:
         print(f"leave_apply_test error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+    
 @app.route("/leave/apply", methods=["POST"])
 def leave_apply():
     try:
