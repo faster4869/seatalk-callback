@@ -121,7 +121,7 @@ def send_leave_request_card(manager_email: str, leave_data: dict):
 
     payload = {
         "bot_id": bot_id,
-        "to_employee_code": manager_code,
+        "to_email": manager_email,
         "message_type": "interactive_card",
         "content": json.dumps(card)
     }
