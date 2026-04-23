@@ -283,17 +283,14 @@ def bot_callback_handler():
             return "Verification event data not found.", 400
 
         elif event_type == INTERACTIVE_MESSAGE_CLICK:
-            event_data = data.get("event", {})
-            # 取得按鈕的 value（我們塞的 JSON 字串）
-            print(f"CLICK event_data: {json.dumps(event_data)}")  # 加這行
-            raw_value = event_data.get("interactive_info", {}).get("value", "{}")
-            click_data = json.loads(raw_value)
-
-            action = click_data.get("action")
-            request_id = click_data.get("request_id")
-            reason = click_data.get("reason", "")
-
-            print(f"互動點擊 - action: {action}, request_id: {request_id}, reason: {reason}")
+             event_data = data.get("event", {})
+             raw_value = event_data.get("value", "{}")  # 直接從 event_data 取
+             click_data = json.loads(raw_value)
+            
+             action = click_data.get("action")
+             request_id = click_data.get("request_id")
+             reason = click_data.get("reason", "")
+             print(f"互動點擊 - action: {action}, request_id: {request_id}, reason: {reason}")
 
             if not request_id:
                 return "", 200
