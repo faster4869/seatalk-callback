@@ -54,217 +54,69 @@
   }
 
   /* Header */
-  .header {
-    margin-bottom: 40px;
-    animation: fadeDown 0.6s ease;
-  }
-
-  .header-tag {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-bottom: 12px;
-  }
-
-  .header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-  }
-
-  .header h1 span {
-    color: var(--accent);
-  }
-
-  .user-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding: 6px 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 12px;
-    color: var(--text2);
-    font-family: 'DM Mono', monospace;
-  }
-
-  .user-dot {
-    width: 6px;
-    height: 6px;
-    background: var(--success);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
+  .header { margin-bottom: 40px; animation: fadeDown 0.6s ease; }
+  .header-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 12px; }
+  .header h1 { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  
+  .user-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .user-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
 
   /* Tabs */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-    animation: fadeUp 0.6s ease 0.1s both;
-  }
-
-  .tab {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    cursor: pointer;
-    border-radius: 7px;
-    transition: all 0.2s ease;
-    border: none;
-    background: transparent;
-  }
-
-  .tab.active {
-    background: var(--accent);
-    color: white;
-  }
-
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; animation: fadeUp 0.6s ease 0.1s both; }
+  .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 7px; transition: all 0.2s ease; border: none; background: transparent; }
+  .tab.active { background: var(--accent); color: white; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
   /* Form */
-  .form-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 28px;
-    animation: fadeUp 0.6s ease 0.2s both;
-  }
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; animation: fadeUp 0.6s ease 0.2s both; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+  .form-control { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans TC', sans-serif; transition: border-color 0.2s; outline: none; appearance: none; color-scheme: dark; }
+  .form-control:focus { border-color: var(--accent); }
+  .form-control option { background: var(--surface2); }
 
-  .form-group {
-    margin-bottom: 20px;
-  }
+  /* RWD 響應式網格設定 */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-  .form-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .form-control {
-    width: 100%;
-    padding: 12px 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'Noto Sans TC', sans-serif;
-    transition: border-color 0.2s;
-    outline: none;
-    appearance: none;
-    color-scheme: dark;
-  }
-
-  .form-control:focus {
-    border-color: var(--accent);
-  }
-
-  .form-control option {
-    background: var(--surface2);
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  /* 時間選單專屬容器 */
-  .time-wrapper {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  /* 讓日期輸入框自動佔滿剩餘空間 */
-  .time-wrapper input[type="date"] {
-    flex: 1; 
-  }
-
-  /* 時、分下拉選單保持適當寬度 */
-  .time-wrapper select {
-    padding: 12px 4px;
-    min-width: 50px;
-  }
-
-  /* 手機版排版調整 (小於 480px) */
+  /* 當螢幕寬度小於 480px (手機) 時，改為單欄排列 */
   @media (max-width: 480px) {
-    .form-row {
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-    
-    .time-wrapper {
-      gap: 4px; /* 縮小元素間隔 */
-    }
-    
-    .time-wrapper input[type="date"] {
-      padding: 12px 6px; /* 縮小日期兩側留白，避免字體被擠到換行 */
-      font-size: 13px; /* 微調字體大小以適應「年月日」 */
-    }
-
-    .time-wrapper select {
-      padding: 12px 2px; /* 縮小下拉選單的 padding */
-      min-width: 44px; /* 縮小最小寬度 */
-      font-size: 13px;
-    }
+    .form-row { grid-template-columns: 1fr; gap: 12px; }
   }
 
-  textarea.form-control {
-    resize: vertical;
-    min-height: 90px;
+  /* ====== 新增：嚴格控制 50/50 版面 ====== */
+  .time-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 強制分兩半：左邊一半、右邊一半 */
+    gap: 8px;
   }
 
-  .submit-btn {
-    width: 100%;
-    padding: 14px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Noto Sans TC', sans-serif;
-    letter-spacing: 1px;
-    position: relative;
-    overflow: hidden;
+  .time-parts {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
-  .submit-btn:hover {
-    background: #ff8555;
-    transform: translateY(-1px);
+  .time-parts select {
+    flex: 1; /* 讓時與分均分剩下的空間 */
+    padding: 12px 4px;
+    text-align: center;
+    min-width: 0; /* 關鍵：防止手機上因為預設寬度過大而撐破版面 */
   }
 
-  .submit-btn:active {
-    transform: translateY(0);
+  .time-colon {
+    font-weight: bold;
+    color: var(--text2);
   }
+  /* ======================================= */
 
-  .submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
+  textarea.form-control { resize: vertical; min-height: 90px; }
+  
+  .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; position: relative; overflow: hidden; }
+  .submit-btn:hover { background: #ff8555; transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   /* Status list */
   .status-list { animation: fadeUp 0.6s ease 0.2s both; }
@@ -368,12 +220,16 @@
           <label class="form-label">開始時間</label>
           <div class="time-wrapper">
             <input type="date" class="form-control" id="startDate" onchange="calculateDuration()">
-            <select class="form-control" id="startHour" onchange="calculateDuration()"></select>
-            <span style="font-weight: bold; color: var(--text2);">:</span>
-            <select class="form-control" id="startMinute" onchange="calculateDuration()">
-              <option value="00">00</option>
-              <option value="30">30</option>
-            </select>
+            
+            <div class="time-parts">
+              <select class="form-control" id="startHour" onchange="calculateDuration()"></select>
+              <span class="time-colon">:</span>
+              <select class="form-control" id="startMinute" onchange="calculateDuration()">
+                <option value="00">00</option>
+                <option value="30">30</option>
+              </select>
+            </div>
+
           </div>
         </div>
         
@@ -381,12 +237,16 @@
           <label class="form-label">結束時間</label>
           <div class="time-wrapper">
             <input type="date" class="form-control" id="endDate" onchange="calculateDuration()">
-            <select class="form-control" id="endHour" onchange="calculateDuration()"></select>
-            <span style="font-weight: bold; color: var(--text2);">:</span>
-            <select class="form-control" id="endMinute" onchange="calculateDuration()">
-              <option value="00">00</option>
-              <option value="30">30</option>
-            </select>
+            
+            <div class="time-parts">
+              <select class="form-control" id="endHour" onchange="calculateDuration()"></select>
+              <span class="time-colon">:</span>
+              <select class="form-control" id="endMinute" onchange="calculateDuration()">
+                <option value="00">00</option>
+                <option value="30">30</option>
+              </select>
+            </div>
+
           </div>
         </div>
       </div>
