@@ -9,6 +9,8 @@ import time
 from flask import Flask, request, jsonify
 import gspread
 from google.oauth2.service_account import Credentials
+from authlib.integrations.flask_client import OAuth
+from flask import session, redirect, url_for, request as flask_request
 
 # settings
 SIGNING_SECRET = b"vhlIrg0Zi_P-EVVK5_x9PZfMnwQvzDNP"
@@ -23,7 +25,17 @@ BOT_REMOVED_FROM_GROUP_CHAT = "bot_removed_from_group_chat"
 NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT = "new_mentioned_message_received_from_group_chat"
 
 app = Flask(__name__)
+# OAuth 設定（加在 app = Flask(__name__) 後面）
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 # =====================
 # Firebase 初始化（維持原本邏輯）
 # =====================
@@ -173,6 +185,51 @@ def find_row_by_request_id(sheet, request_id: str):
             return i + 1  # gspread 行號從 1 開始
     return None
 
+# ── Google OAuth ──────────────────────────────────────
+@app.route("/auth/login")
+def auth_login():
+    redirect_uri = url_for('auth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/callback")
+def auth_callback():
+    token = google.authorize_access_token()
+    user = token.get('userinfo')
+    email = user.get('email')
+    name = user.get('name', email.split('@')[0])
+
+    # 導回前端，帶上 email 和 name
+    frontend_url = os.environ.get("FRONTEND_URL", "/")
+    return redirect(f"{frontend_url}?email={email}&name={name}")
+
+@app.route("/leave")
+def leave_page():
+    with open("leave_app.html", "r", encoding="utf-8") as f:
+        return f.read()
+
+# ── 查詢申請記錄 ──────────────────────────────────────
+@app.route("/leave/list", methods=["GET"])
+def leave_list():
+    try:
+        email = flask_request.args.get("email")
+        if not email:
+            return jsonify({"status": "error", "message": "缺少 email"}), 400
+
+        service_account_info = json.loads(os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON"))
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
+
+        records = sheet.get_all_records()
+        user_records = [r for r in records if r.get("employee_email") == email]
+
+        return jsonify({"status": "ok", "records": user_records}), 200
+
+    except Exception as e:
+        print(f"leave_list error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
 # =====================
 # 新 Route：接收請假申請
 # =====================
