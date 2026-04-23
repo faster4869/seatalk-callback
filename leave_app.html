@@ -189,7 +189,7 @@
   <div class="header">
     <div class="header-tag">Leave Management</div>
     <h1>請假<span>申請</span>系統</h1>
-    <div class="user-badge">
+    <div class="user-badge" onclick="logout()" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#ef4444'; this.style.boxShadow='0 0 8px rgba(239, 68, 68, 0.2)';" onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" title="點擊登出 / 切換帳號">
       <div class="user-dot"></div>
       <span id="userEmail">載入中...</span>
     </div>
@@ -212,6 +212,7 @@
           <option value="生理假">生理假</option>
           <option value="婚假">婚假</option>
           <option value="喪假">喪假</option>
+          <option value="加班">加班</option>
         </select>
       </div>
 
@@ -259,8 +260,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">原因</label>
-        <textarea class="form-control" id="reason" placeholder="請簡述請假原因..."></textarea>
+        <label class="form-label">原因/說明</label>
+        <textarea class="form-control" id="reason" placeholder="請簡述請假原因，若為申請加班請務必說明touch/judge案件數量..."></textarea>
       </div>
 
       <button class="submit-btn" id="submitBtn" onclick="submitLeave()">
