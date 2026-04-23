@@ -170,6 +170,31 @@ def write_to_sheets(leave_data: dict, action: str, reason: str):
 # =====================
 # 新 Route：接收請假申請
 # =====================
+@app.route("/leave/apply/test", methods=["POST"])
+def leave_apply_test():
+    """測試用：不查 Firebase，直接發卡片"""
+    try:
+        # 假資料，不需要 Firebase
+        leave_data = {
+            "request_id": f"LEAVE_{int(time.time())}",
+            "employee_email": "chris.chouyh@shopee.com",
+            "employee_name": "Chris",
+            "manager_email": "chris.chouyh@shopee.com",  # 先發給自己測試
+            "leave_type": "特休",
+            "start_datetime": "2026-05-01 09:00",
+            "end_datetime": "2026-05-01 18:00",
+            "reason": "家庭因素",
+            "status": "pending",
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        result = send_leave_request_card(leave_data["manager_email"], leave_data)
+        return jsonify({"status": "ok", "seatalk_response": result}), 200
+
+    except Exception as e:
+        print(f"leave_apply_test error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
 @app.route("/leave/apply", methods=["POST"])
 def leave_apply():
     """接收 AppSheet 送出的請假申請"""
