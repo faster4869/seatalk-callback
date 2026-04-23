@@ -533,18 +533,17 @@ def bot_callback_handler():
 
                 access_token = get_access_token()
                 
-                # 🔴 修正點 1：依照 SeaTalk v2 格式，把 interactive_message 包在 message 裡面
+                # 🔴 依照官方文件，"message" 裡面直接放 "interactive_message"
                 update_payload = {
                     "message_id": message_id,
                     "message": {
-                        "tag": "interactive_message",
                         "interactive_message": updated_card
                     }
                 }
                 
-                # 🔴 修正點 2：使用 SeaTalk v2 正確的「更新訊息 API」網址
-                res = requests.put(
-                    "https://openapi.seatalk.io/messaging/v2/message",
+                # 🔴 改用 POST，並指向 /v2/update 網址
+                res = requests.post(
+                    "https://openapi.seatalk.io/messaging/v2/update",
                     headers={
                         "Authorization": f"Bearer {access_token}",
                         "Content-Type": "application/json"
