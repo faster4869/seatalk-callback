@@ -517,32 +517,39 @@ def bot_callback_handler():
                     "elements": [
                         {
                             "element_type": "title",
-                            "title": {"text": "📋 請假審核申請 (已處理)"},
+                            "title": {
+                                "text": "📋 請假審核申請 (已處理)"
+                            }
                         },
                         {
                             "element_type": "description",
                             "description": {
                                 "format": 1,
-                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n➖➖➖➖➖➖\n**審核結果**：{status_text}",
-                            },
-                        },
+                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n➖➖➖➖➖➖\n**審核結果**：{status_text}"
+                            }
+                        }
                     ]
                 }
 
                 access_token = get_access_token()
+                
+                # 🔴 修正點 1：依照 SeaTalk v2 格式，把 interactive_message 包在 message 裡面
                 update_payload = {
                     "message_id": message_id,
-                    "interactive_message": updated_card,
+                    "message": {
+                        "tag": "interactive_message",
+                        "interactive_message": updated_card
+                    }
                 }
-
-                # 呼叫 SeaTalk 的「更新卡片 API」
+                
+                # 🔴 修正點 2：使用 SeaTalk v2 正確的「更新訊息 API」網址
                 res = requests.put(
-                    "https://openapi.seatalk.io/messaging/v2/interactive_message",
+                    "https://openapi.seatalk.io/messaging/v2/message",
                     headers={
                         "Authorization": f"Bearer {access_token}",
-                        "Content-Type": "application/json",
+                        "Content-Type": "application/json"
                     },
-                    json=update_payload,
+                    json=update_payload
                 )
                 print(f"Update card response: {res.json()}")
 
