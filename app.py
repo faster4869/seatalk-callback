@@ -318,7 +318,7 @@ def bot_callback_handler():
                 return "", 200
 
             # 開啟 Sheets
-            service_account_info = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
+            service_account_info = json.loads(os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON"))
             scopes = ["https://www.googleapis.com/auth/spreadsheets"]
             creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
             gc = gspread.authorize(creds)
