@@ -292,7 +292,7 @@ def bot_callback_handler():
             print("Bot removed from group chat event received.")
             pass
 
-                elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
+        elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
             group_id = data["event"]["group_id"]
