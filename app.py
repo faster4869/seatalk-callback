@@ -243,11 +243,26 @@ def leave_apply():
         data = request.get_json()
         print(f"收到請假申請: {data}")
 
-        request_id = f"LEAVE_{int(time.time())}"
+        # 用 AppSheet 傳來的 request_id，沒有的話才自己產生
+        request_id = data.get("request_id") or f"LEAVE_{int(time.time())}"
 
-        # 查主管對應表（從 Sheets 的另一個工作表，或先暫時寫死）
-        manager_employee_code = "主管的employee_code"
-        manager_email = "主管的email"
+        # 開啟 Sheets
+        service_account_info = json.loads(os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON"))
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+
+        # 查主管對應表
+        map_sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("主管對應表")
+        records = map_sheet.get_all_records()
+        manager_data = next((r for r in records if r["employee_email"] == data["employee_email"]), None)
+
+        if not manager_data:
+            print(f"找不到對應主管: {data['employee_email']}")
+            return jsonify({"status": "error", "message": "找不到對應主管"}), 400
+
+        manager_email = manager_data["manager_email"]
+        manager_employee_code = str(manager_data["manager_employee_code"])
 
         leave_data = {
             "request_id": request_id,
@@ -264,12 +279,7 @@ def leave_apply():
         }
 
         # 寫入 Google Sheets
-        service_account_info = json.loads(os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON"))
-        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-        gc = gspread.authorize(creds)
         sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
-
         sheet.append_row([
             leave_data["request_id"],
             leave_data["employee_email"],
