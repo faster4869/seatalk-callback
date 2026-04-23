@@ -68,9 +68,10 @@ def get_employee_code(email: str, access_token: str) -> str:
 
 def send_leave_request_card(manager_email: str, leave_data: dict):
     """發送請假審核互動卡片給主管"""
+    
     access_token = get_access_token()
     bot_id = os.environ.get("SEATALK_BOT_ID")
-
+    print(f"sending payload: bot_id={bot_id}, to_email={manager_email}")
     card = {
         "config": {"wide_screen_mode": True},
         "header": {
