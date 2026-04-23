@@ -193,14 +193,15 @@ def leave_apply_test():
         card = build_leave_card(leave_data)  
 
         payload = {
-            "bot_id": bot_id,
-            "to_employee_code": "247857",  # 直接硬寫
-            "message_type": "interactive_card",
-            "content": json.dumps(card)
+            "employee_code": "247857",
+            "message": {
+                "tag": "interactive_card",
+                "interactive_card": card
+            }
         }
 
         response = requests.post(
-            "https://openapi.seatalk.io/messaging/v2/bot/send_single_chat",
+            "https://openapi.seatalk.io/messaging/v2/single_chat",
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json"
