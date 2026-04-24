@@ -1,527 +1,778 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>請假申請系統</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    /* 告訴瀏覽器這個網頁支援雙色模式，讓日曆圖示、下拉選單、捲軸自動變色 */
-    color-scheme: light dark;
+import hashlib
+import requests
+import json
+import firebase_admin
+from firebase_admin import credentials, db
+from typing import Dict, Any, List
+import os
+import time
+from flask import Flask, request, jsonify
+import gspread
+from google.oauth2.service_account import Credentials
+from authlib.integrations.flask_client import OAuth
+from flask import session, redirect, url_for, request as flask_request
 
-    /* 預設（淺色模式）的變數 */
-    --bg: #f8fafc;
-    --surface: #ffffff;
-    --surface2: #f1f5f9;
-    --border: #e2e8f0;
-    --text: #0f172a;
-    --text2: #64748b;
-    --text3: #94a3b8;
-    --accent: #f97316;
-    --success: #10b981;
-    --danger: #ef4444;
-    --pending: #f59e0b;
-  }
+# settings
+SIGNING_SECRET = os.environ.get("SEATALK_BOT_SECRETSIGNING", "").encode()
 
-  /* 當使用者的裝置設定為「深色模式」時，自動啟動這組配色來覆寫上方變數 */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f0f0f;
-      --surface: #1a1a1a;
-      --surface2: #242424;
-      --border: #2e2e2e;
-      --text: #f0f0f0;
-      --text2: #888;
-      --text3: #555;
-      --accent: #ff6b35;
-      --success: #4caf7d;
-      --danger: #e05252;
-      --pending: #f0a500;
-    }
-  }
+# event list
+EVENT_VERIFICATION = "event_verification"
+NEW_BOT_SUBSCRIBER = "new_bot_subscriber"
+MESSAGE_FROM_BOT_SUBSCRIBER = "message_from_bot_subscriber"
+INTERACTIVE_MESSAGE_CLICK = "interactive_message_click"
+BOT_ADDED_TO_GROUP_CHAT = "bot_added_to_group_chat"
+BOT_REMOVED_FROM_GROUP_CHAT = "bot_removed_from_group_chat"
+NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT = (
+    "new_mentioned_message_received_from_group_chat"
+)
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+app = Flask(__name__)
+# OAuth 設定（加在 app = Flask(__name__) 後面）
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
-  /* Background grid */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 40px 40px;
-    opacity: 0.3;
-    pointer-events: none;
-    z-index: 0;
-  }
 
-  .container {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 40px 20px;
-    position: relative;
-    z-index: 1;
-  }
+# =====================
+# Firebase 初始化（維持原本邏輯）
+# =====================
+def is_valid_signature(signing_secret: bytes, body: bytes, signature: str) -> bool:
+    calculated_signature = hashlib.sha256(body + signing_secret).hexdigest()
+    return calculated_signature == signature
 
-  /* Header */
-  .header { margin-bottom: 40px; animation: fadeDown 0.6s ease; }
-  .header-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 12px; }
-  .header h1 { font-size: 28px; font-weight: 700; line-height: 1.2; letter-spacing: -0.5px; }
-  .header h1 span { color: var(--accent); }
-  
-  .user-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
-  .user-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; animation: fadeUp 0.6s ease 0.1s both; }
-  .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 7px; transition: all 0.2s ease; border: none; background: transparent; }
-  .tab.active { background: var(--accent); color: white; }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+def init_firebase():
+    service_account_json_str = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if not service_account_json_str:
+        raise ValueError("環境變數 'FIREBASE_SERVICE_ACCOUNT_JSON' 未設定。")
+    service_account_info = json.loads(service_account_json_str)
+    cred = credentials.Certificate(service_account_info)
+    db_url = os.environ.get("FIREBASE_DATABASE_URL")
+    if not db_url:
+        raise ValueError("環境變數 'FIREBASE_DATABASE_URL' 未設定。")
+    firebase_admin.initialize_app(cred, {"databaseURL": db_url})
+    print("Firebase Admin SDK 初始化成功。")
 
-  /* Form */
-  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; animation: fadeUp 0.6s ease 0.2s both; }
-  .form-group { margin-bottom: 20px; }
-  .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
-  .form-control { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans TC', sans-serif; transition: border-color 0.2s; outline: none; appearance: none; }
-  .form-control:focus { border-color: var(--accent); }
-  .form-control option { background: var(--surface2); }
 
-  /* RWD 響應式網格設定 */
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+init_firebase()
 
-  /* 當螢幕寬度小於 480px (手機) 時，改為單欄排列 */
-  @media (max-width: 480px) {
-    .form-row { grid-template-columns: 1fr; gap: 12px; }
-  }
 
-  /* ====== 新增：嚴格控制 50/50 版面 ====== */
-  .time-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 強制分兩半：左邊一半、右邊一半 */
-    gap: 8px;
-  }
+# =====================
+# SeaTalk 共用函式
+# =====================
+def get_access_token() -> str:
+    app_id = os.environ.get("SEATALK_BOT_APP_ID")
+    app_secret = os.environ.get("SEATALK_BOT_APP_SECRET")
+    response = requests.post(
+        "https://openapi.seatalk.io/auth/app_access_token",
+        json={"app_id": app_id, "app_secret": app_secret},
+    )
+    return response.json().get("app_access_token")
 
-  .time-parts {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
 
-  .time-parts select {
-    flex: 1; /* 讓時與分均分剩下的空間 */
-    padding: 12px 4px;
-    text-align: center;
-    min-width: 0; /* 關鍵：防止手機上因為預設寬度過大而撐破版面 */
-  }
+def get_employee_code(email: str, access_token: str) -> str:
+    response = requests.get(
+        f"https://openapi.seatalk.io/contacts/v2/user/info?email={email}",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    data = response.json()
+    print(f"get_employee_code response: {data}")
+    return data.get("employee_code")
 
-  .time-colon {
-    font-weight: bold;
-    color: var(--text2);
-  }
-  /* ======================================= */
 
-  textarea.form-control { resize: vertical; min-height: 90px; }
-  
-  .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; letter-spacing: 1px; position: relative; overflow: hidden; }
-  .submit-btn:hover { background: #ff8555; transform: translateY(-1px); }
-  .submit-btn:active { transform: translateY(0); }
-  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-  /* Status list */
-  .status-list { animation: fadeUp 0.6s ease 0.2s both; }
-  .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .status-title { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
-  .refresh-btn { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: 'DM Mono', monospace; }
-  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-  
-  .leave-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; transition: border-color 0.2s; animation: fadeUp 0.4s ease both; }
-  .leave-card:hover { border-color: var(--text3); }
-  .leave-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-  .leave-type-badge { font-size: 13px; font-weight: 700; color: var(--text); }
-  
-  .status-badge { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
-  .status-pending { background: rgba(240, 165, 0, 0.15); color: var(--pending); border: 1px solid rgba(240, 165, 0, 0.3); }
-  .status-approved { background: rgba(76, 175, 125, 0.15); color: var(--success); border: 1px solid rgba(76, 175, 125, 0.3); }
-  .status-rejected { background: rgba(224, 82, 82, 0.15); color: var(--danger); border: 1px solid rgba(224, 82, 82, 0.3); }
-  
-  .leave-dates { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
-  .leave-reason { font-size: 13px; color: var(--text2); }
-  .reject-reason { margin-top: 8px; padding: 8px 12px; background: rgba(224, 82, 82, 0.08); border-left: 3px solid var(--danger); border-radius: 0 4px 4px 0; font-size: 12px; color: var(--danger); }
-  
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
-  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
-  .empty-text { font-size: 14px; font-family: 'DM Mono', monospace; }
-
-  /* Toast & Loading */
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 13px; z-index: 100; transition: transform 0.3s ease; min-width: 260px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.success { border-color: var(--success); color: var(--success); }
-  .toast.error { border-color: var(--danger); color: var(--danger); }
-  .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
-
-  /* Login screen */
-  .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; text-align: center; max-width: 380px; width: 90%; animation: fadeUp 0.6s ease; }
-  .login-logo { font-size: 36px; margin-bottom: 16px; }
-  .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 32px; line-height: 1.6; }
-  .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; background: white; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; }
-  .google-btn:hover { background: #f5f5f5; transform: translateY(-1px); }
-  .google-icon { width: 18px; height: 18px; }
-
-  @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-</style>
-</head>
-<body>
-
-<div class="login-screen" id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo">📋</div>
-    <div class="login-title">請假申請系統</div>
-    <div class="login-sub">使用您的 Shopee Google 帳號登入<br>以送出請假申請或查看審核狀態</div>
-    <button class="google-btn" onclick="handleGoogleLogin()">
-      <svg class="google-icon" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      </svg>
-      使用 Google 帳號登入
-    </button>
-  </div>
-</div>
-
-<div class="container" id="mainApp" style="display:none">
-  <div class="header">
-    <div class="header-tag">Leave Management</div>
-    <h1>請假<span>申請</span>系統</h1>
-    <div class="user-badge" onclick="logout()" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#ef4444'; this.style.boxShadow='0 0 8px rgba(239, 68, 68, 0.2)';" onmouseout="this.style.borderColor='var(--border)'; this.style.boxShadow='none';" title="點擊登出 / 切換帳號">
-      <div class="user-dot"></div>
-      <span id="userEmail">載入中...</span>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('apply')">請假申請</button>
-    <button class="tab" onclick="switchTab('status')">審核結果</button>
-  </div>
-
-  <div class="tab-content active" id="tab-apply">
-    <div class="form-card">
-      <div class="form-group">
-        <label class="form-label">假別</label>
-        <select class="form-control" id="leaveType">
-          <option value="">請選擇假別</option>
-          <option value="特休">特休</option>
-          <option value="事假">事假</option>
-          <option value="病假">病假</option>
-          <option value="生理假">生理假</option>
-          <option value="婚假">婚假</option>
-          <option value="喪假">喪假</option>
-        </select>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">開始時間</label>
-          <div class="time-wrapper">
-            <input type="date" class="form-control" id="startDate" onchange="calculateDuration()">
-            
-            <div class="time-parts">
-              <select class="form-control" id="startHour" onchange="calculateDuration()"></select>
-              <span class="time-colon">:</span>
-              <select class="form-control" id="startMinute" onchange="calculateDuration()">
-                <option value="00">00</option>
-                <option value="30">30</option>
-              </select>
-            </div>
-
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">結束時間</label>
-          <div class="time-wrapper">
-            <input type="date" class="form-control" id="endDate" onchange="calculateDuration()">
-            
-            <div class="time-parts">
-              <select class="form-control" id="endHour" onchange="calculateDuration()"></select>
-              <span class="time-colon">:</span>
-              <select class="form-control" id="endMinute" onchange="calculateDuration()">
-                <option value="00">00</option>
-                <option value="30">30</option>
-              </select>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Duration</label>
-        <div id="durationDisplay" style="height: 24px; display: flex; align-items: center; font-weight: 700; color: var(--accent); font-size: 16px;">
-          0 hrs
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">原因/說明</label>
-        <textarea class="form-control" id="reason" placeholder="請簡述請假原因..."></textarea>
-      </div>
-
-      <button class="submit-btn" id="submitBtn" onclick="submitLeave()">
-        送出申請
-      </button>
-    </div>
-  </div>
-
-  <div class="tab-content" id="tab-status">
-    <div class="status-list">
-      <div class="status-header">
-        <span class="status-title">我的申請記錄</span>
-        <button class="refresh-btn" onclick="loadLeaveStatus()">↻ 重新整理</button>
-      </div>
-      <div id="leaveList">
-        <div class="empty-state">
-          <div class="empty-icon">📂</div>
-          <div class="empty-text">載入中...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-  const API_BASE = 'https://seatalk-callback.onrender.com';
-  let currentUser = null;
-
-  document.addEventListener("DOMContentLoaded", function() {
-    populateHours();
-    setDefaultDates();
-    checkAuth();
-  });
-
-  function populateHours() {
-    const startHour = document.getElementById("startHour");
-    const endHour = document.getElementById("endHour");
-    for (let i = 0; i < 24; i++) {
-      let hourStr = i.toString().padStart(2, '0');
-      startHour.add(new Option(hourStr, hourStr));
-      endHour.add(new Option(hourStr, hourStr));
-    }
-    startHour.value = "09";
-    endHour.value = "18";
-  }
-
-  function setDefaultDates() {
-    const localDate = new Date();
-    const offset = localDate.getTimezoneOffset() * 60000;
-    const today = new Date(localDate.getTime() - offset).toISOString().split('T')[0];
-    document.getElementById("startDate").value = today;
-    document.getElementById("endDate").value = today;
-    calculateDuration(); 
-  }
-
-  function calculateDuration() {
-    const startDate = document.getElementById("startDate").value;
-    const startHour = document.getElementById("startHour").value;
-    const startMinute = document.getElementById("startMinute").value;
-    const endDate = document.getElementById("endDate").value;
-    const endHour = document.getElementById("endHour").value;
-    const endMinute = document.getElementById("endMinute").value;
-    const display = document.getElementById("durationDisplay");
-
-    if (startDate && endDate && startHour && endHour) {
-      const start = new Date(`${startDate}T${startHour}:${startMinute}:00`);
-      const end = new Date(`${endDate}T${endHour}:${endMinute}:00`);
-      const diffMs = end - start;
-      const diffHours = diffMs / (1000 * 60 * 60);
-
-      if (diffHours < 0) {
-        display.innerText = "時間錯誤 (結束需晚於開始)";
-        display.style.color = "var(--danger)";
-      } else {
-        display.innerText = `${diffHours} hrs`;
-        display.style.color = "var(--accent)";
-      }
-    } else {
-      display.innerText = "0 hrs";
-      display.style.color = "var(--text2)";
-    }
-  }
-
-  // ── Google OAuth ──────────────────────────────────────
-  function handleGoogleLogin() {
-    window.location.href = `${API_BASE}/auth/login?redirect=${encodeURIComponent(window.location.href)}`;
-  }
-  
-  // ── Logout ────────────────────────────────────────────
-  function logout() {
-    // 彈出確認視窗，防止手滑誤觸
-    if (confirm(`目前的帳號是：\n${currentUser.email}\n\n確定要登出並回到登入畫面嗎？`)) {
-      // 清除 localStorage 記憶的帳號
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_name');
-      currentUser = null;
-      
-      // 清除網址列參數（避免重新整理又自動登入）
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      // 切換回登入頁
-      showLogin();
-    }
-  }
-  function checkAuth() {
-    const params = new URLSearchParams(window.location.search);
-    const email = params.get('email') || localStorage.getItem('user_email');
-    const name = params.get('name') || localStorage.getItem('user_name');
-
-    if (email) {
-      localStorage.setItem('user_email', email);
-      if (name) localStorage.setItem('user_name', name);
-      currentUser = { email, name: name || email.split('@')[0] };
-      showApp();
-    } else {
-      showLogin();
-    }
-  }
-
-  function showApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('userEmail').textContent = currentUser.email;
-  }
-
-  function showLogin() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-  }
-
-  // ── Tabs ──────────────────────────────────────────────
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', (i === 0 && tab === 'apply') || (i === 1 && tab === 'status'));
-    });
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    if (tab === 'status') loadLeaveStatus();
-  }
-
-  // ── Submit Leave ──────────────────────────────────────
-  async function submitLeave() {
-    const leaveType = document.getElementById('leaveType').value;
-    const startDate = document.getElementById('startDate').value;
-    const startHour = document.getElementById('startHour').value;
-    const startMinute = document.getElementById('startMinute').value;
-    const endDate = document.getElementById('endDate').value;
-    const endHour = document.getElementById('endHour').value;
-    const endMinute = document.getElementById('endMinute').value;
-    const reason = document.getElementById('reason').value;
-    const durationText = document.getElementById("durationDisplay").innerText;
-
-    if (!leaveType || !startDate || !endDate || !reason) {
-      showToast('請填寫所有欄位', 'error');
-      return;
+def build_leave_card(leave_data: dict) -> dict:
+    return {
+        "elements": [
+            {"element_type": "title", "title": {"text": f"{leave_data['employee_name']}請假審核申請"}},
+            {
+                "element_type": "description",
+                "description": {
+                    "format": 1,
+                    "text": f"**員工**：{leave_data['employee_name']}\n**假別**：{leave_data['leave_type']}\n**開始時間**：{leave_data['start_datetime']}\n**結束時間**：{leave_data['end_datetime']}\n**原因**：{leave_data['reason']}",
+                },
+            },
+            {
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "審核通過",
+                    "value": json.dumps(
+                        {
+                            "action": "approve",
+                            "reason": "審核通過",
+                            "request_id": leave_data["request_id"],
+                        }
+                    ),
+                },
+            },
+            {
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "資料錯誤",
+                    "value": json.dumps(
+                        {
+                            "action": "reject",
+                            "reason": "資料錯誤",
+                            "request_id": leave_data["request_id"],
+                        }
+                    ),
+                },
+            },
+            {
+                "element_type": "button",
+                "button": {
+                    "button_type": "callback",
+                    "text": "禁休日",
+                    "value": json.dumps(
+                        {
+                            "action": "reject",
+                            "reason": "禁止休假日",
+                            "request_id": leave_data["request_id"],
+                        }
+                    ),
+                },
+            },
+        ]
     }
 
-    if (durationText.includes('錯誤')) {
-      showToast('結束時間必須晚於開始時間', 'error');
-      return;
+
+def send_leave_request_card(manager_employee_code: str, leave_data: dict):
+    """發送請假審核互動卡片給主管"""
+    access_token = get_access_token()
+    print(f"sending payload to_employee_code={manager_employee_code}")
+
+    # 使用 Seatalk v2 正確的 Payload 格式
+    payload = {
+        "employee_code": manager_employee_code,
+        "message": {
+            "tag": "interactive_message",
+            "interactive_message": build_leave_card(leave_data),
+        },
     }
 
-    const startDatetime = `${startDate} ${startHour}:${startMinute}`;
-    const endDatetime = `${endDate} ${endHour}:${endMinute}`;
+    # 使用正確的 v2 網址 (拿掉 /bot/send_)
+    response = requests.post(
+        "https://openapi.seatalk.io/messaging/v2/single_chat",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+    )
 
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span>送出中...';
+    result = response.json()
+    print(f"send_leave_request_card response: {result}")
+    return result
 
-    try {
-      const res = await fetch(`${API_BASE}/leave/apply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_email: currentUser.email,
-          employee_name: currentUser.name,
-          leave_type: leaveType,
-          start_datetime: startDatetime,
-          end_datetime: endDatetime,
-          reason
-        })
-      });
 
-      const data = await res.json();
-      if (data.status === 'ok') {
-        showToast('申請送出成功！等待主管審核', 'success');
-        document.getElementById('leaveType').value = '';
-        document.getElementById('reason').value = '';
-        setDefaultDates(); 
-      } else {
-        showToast(data.message || '送出失敗，請稍後再試', 'error');
-      }
-    } catch (e) {
-      showToast('網路錯誤，請稍後再試', 'error');
-    }
+# =====================
+# Google Sheets 寫入（審核完成後記錄）
+# =====================
+def write_to_sheets(leave_data: dict, action: str, reason: str):
+    """審核完成後寫一筆記錄到 Google Sheets"""
+    try:
+        service_account_info = json.loads(
+            os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+        )
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            service_account_info, scopes=scopes
+        )
+        gc = gspread.authorize(creds)
 
-    btn.disabled = false;
-    btn.innerHTML = '送出申請';
-  }
+        sheet_id = os.environ.get("LEAVE_SHEET_ID")
+        sheet = gc.open_by_key(sheet_id).worksheet("休假記錄")
 
-  // ── Load Status ───────────────────────────────────────
-  async function loadLeaveStatus() {
-    const list = document.getElementById('leaveList');
-    list.innerHTML = '<div class="empty-state"><div class="empty-text">載入中...</div></div>';
+        sheet.append_row(
+            [
+                leave_data.get("created_at", ""),
+                leave_data.get("employee_name", ""),
+                leave_data.get("employee_email", ""),
+                leave_data.get("leave_type", ""),
+                leave_data.get("start_datetime", ""),
+                leave_data.get("end_datetime", ""),
+                leave_data.get("manager_email", ""),
+                "approved" if action == "approve" else "rejected",
+                reason,
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+            ]
+        )
+        print("Google Sheets 寫入成功")
+    except Exception as e:
+        print(f"Google Sheets 寫入失敗: {e}")
 
-    try {
-      const res = await fetch(`${API_BASE}/leave/list?email=${encodeURIComponent(currentUser.email)}`);
-      const data = await res.json();
 
-      if (!data.records || data.records.length === 0) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">尚無申請記錄</div></div>';
-        return;
-      }
+def find_row_by_request_id(sheet, request_id: str):
+    """在 Sheets 裡找到對應 request_id 的行號"""
+    records = sheet.get_all_values()
+    for i, row in enumerate(records):
+        if row[0] == request_id:  # A欄是 request_id
+            return i + 1  # gspread 行號從 1 開始
+    return None
 
-      list.innerHTML = data.records.reverse().map((r, i) => `
-        <div class="leave-card" style="animation-delay:${i * 0.05}s">
-          <div class="leave-card-top">
-            <div class="leave-type-badge">${r.leave_type}</div>
-            <div class="status-badge status-${r.status}">
-              ${{ pending: '審核中', approved: '已核准', rejected: '已拒絕' }[r.status] || r.status}
-            </div>
-          </div>
-          <div class="leave-dates">${r.start_datetime} ～ ${r.end_datetime}</div>
-          <div class="leave-reason">${r.reason}</div>
-          ${r.status === 'rejected' && r.reject_reason ? `<div class="reject-reason">拒絕原因：${r.reject_reason}</div>` : ''}
-        </div>
-      `).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">載入失敗</div></div>';
-    }
-  }
 
-  // ── Toast ─────────────────────────────────────────────
-  function showToast(msg, type = 'success') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = `toast ${type} show`;
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
-</script>
-</body>
-</html>
+# ── Google OAuth ──────────────────────────────────────
+@app.route("/auth/login")
+def auth_login():
+    redirect_uri = url_for("auth_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    token = google.authorize_access_token()
+    user = token.get("userinfo")
+    email = user.get("email")
+    name = user.get("name", email.split("@")[0])
+
+    # 導回前端，帶上 email 和 name
+    frontend_url = os.environ.get("FRONTEND_URL", "/")
+    return redirect(f"{frontend_url}?email={email}&name={name}")
+
+
+@app.route("/leave")
+def leave_page():
+    with open("leave_app.html", "r", encoding="utf-8") as f:
+        return f.read()
+
+
+# ── 查詢申請記錄 ──────────────────────────────────────
+@app.route("/leave/list", methods=["GET"])
+def leave_list():
+    try:
+        email = flask_request.args.get("email")
+        if not email:
+            return jsonify({"status": "error", "message": "缺少 email"}), 400
+
+        service_account_info = json.loads(
+            os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
+        )
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            service_account_info, scopes=scopes
+        )
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
+
+        records = sheet.get_all_records()
+        user_records = [r for r in records if r.get("employee_email") == email]
+
+        return jsonify({"status": "ok", "records": user_records}), 200
+
+    except Exception as e:
+        print(f"leave_list error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# =====================
+# 新 Route：接收請假申請
+# =====================
+@app.route("/leave/apply/test", methods=["POST"])
+
+def leave_apply_test():
+    try:
+        leave_data = {
+            "request_id": f"LEAVE_{int(time.time())}",
+            "employee_email": "chris.chouyh@shopee.com",
+            "employee_name": "Chris",
+            "manager_email": "chris.chouyh@shopee.com",
+            "leave_type": "特休",
+            "start_datetime": "2026-05-01 09:00",
+            "end_datetime": "2026-05-01 18:00",
+            "reason": "家庭因素",
+            "status": "pending",
+            "reject_reason": "",
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # 寫入 Sheets
+        service_account_info = json.loads(
+            os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
+        )
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            service_account_info, scopes=scopes
+        )
+        gc = gspread.authorize(creds)
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
+        sheet.append_row(
+            [
+                leave_data["request_id"],
+                leave_data["employee_email"],
+                leave_data["employee_name"],
+                leave_data["leave_type"],
+                leave_data["start_datetime"],
+                leave_data["end_datetime"],
+                leave_data["reason"],
+                leave_data["manager_email"],
+                leave_data["status"],
+                leave_data["reject_reason"],
+                leave_data["created_at"],
+            ]
+        )
+
+        # 發卡片
+        access_token = get_access_token()
+        bot_id = os.environ.get("SEATALK_BOT_ID")
+        payload = {
+            "employee_code": "247857",
+            "message": {
+                "tag": "interactive_message",
+                "interactive_message": build_leave_card(leave_data),
+            },
+            "usable_platform": "mobile",
+        }
+        response = requests.post(
+            "https://openapi.seatalk.io/messaging/v2/single_chat",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+        result = response.json()
+        print(f"send card result: {result}")
+        return jsonify({"status": "ok", "seatalk_response": result}), 200
+
+    except Exception as e:
+        print(f"leave_apply_test error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/leave/apply", methods=["POST"])
+def leave_apply():
+    try:
+        data = request.get_json()
+        print(f"收到請假申請: {data}")
+
+        # 用 AppSheet 傳來的 request_id，沒有的話才自己產生
+        request_id = data.get("request_id") or f"LEAVE_{int(time.time())}"
+
+        # 開啟 Sheets
+        service_account_info = json.loads(
+            os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
+        )
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_info(
+            service_account_info, scopes=scopes
+        )
+        gc = gspread.authorize(creds)
+
+        # 查主管對應表
+        map_sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet(
+            "主管對應表"
+        )
+        records = map_sheet.get_all_records()
+        manager_data = next(
+            (r for r in records if r["employee_email"] == data["employee_email"]), None
+        )
+
+        if not manager_data:
+            print(f"找不到對應主管: {data['employee_email']}")
+            return jsonify({"status": "error", "message": "找不到對應主管"}), 400
+
+        manager_email = manager_data["manager_email"]
+        manager_employee_code = str(manager_data["manager_employee_code"])
+
+        leave_data = {
+            "request_id": request_id,
+            "employee_email": data["employee_email"],
+            "employee_name": data["employee_name"],
+            "leave_type": data["leave_type"],
+            "start_datetime": data["start_datetime"],
+            "end_datetime": data["end_datetime"],
+            "reason": data["reason"],
+            "manager_email": manager_email,
+            "status": "pending",
+            "reject_reason": "",
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # 寫入 Google Sheets
+        sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
+        sheet.append_row(
+            [
+                leave_data["request_id"],
+                leave_data["employee_email"],
+                leave_data["employee_name"],
+                leave_data["leave_type"],
+                leave_data["start_datetime"],
+                leave_data["end_datetime"],
+                leave_data["reason"],
+                leave_data["manager_email"],
+                leave_data["status"],
+                leave_data["reject_reason"],
+                leave_data["created_at"],
+            ]
+        )
+
+        # 發卡片給主管
+        send_leave_request_card(manager_employee_code, leave_data)
+
+        return jsonify({"status": "ok", "request_id": request_id}), 200
+
+    except Exception as e:
+        print(f"leave_apply error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# =====================
+# 原本的 bot-callback（加上 INTERACTIVE_MESSAGE_CLICK 處理）
+# =====================
+@app.route("/bot-callback", methods=["POST"])
+def bot_callback_handler():
+    body: bytes = request.get_data()
+    signature: str = request.headers.get("signature", "").strip()
+
+    if not signature or not is_valid_signature(SIGNING_SECRET, body, signature):
+        return "Invalid signature", 403
+
+    try:
+        data: Dict[str, Any] = json.loads(body)
+        event_type: str = data.get("event_type", "")
+        print(f"Received event type: {event_type}")
+
+        seatalk_challenge = data.get("seatalk_challenge")
+        if seatalk_challenge:
+            return seatalk_challenge
+
+        if event_type == EVENT_VERIFICATION:
+            event_data = data.get("event", {})
+            challenge = event_data.get("seatalk_challenge")
+            if challenge:
+                return jsonify({"seatalk_challenge": challenge})
+            return "Verification event data not found.", 400
+
+        elif event_type == INTERACTIVE_MESSAGE_CLICK:
+            event_data = data.get("event", {})
+            raw_value = event_data.get("value", "{}")
+            click_data = json.loads(raw_value)
+
+            action = click_data.get("action")
+            request_id = click_data.get("request_id")
+            reason = click_data.get("reason", "")
+
+            # 取得該張卡片的 message_id
+            message_id = event_data.get("message_id")
+
+            print(
+                f"互動點擊 - action: {action}, request_id: {request_id}, reason: {reason}"
+            )
+
+            if not request_id:
+                return "", 200
+
+            # 開啟 Sheets
+            service_account_info = json.loads(
+                os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
+            )
+            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+            creds = Credentials.from_service_account_info(
+                service_account_info, scopes=scopes
+            )
+            gc = gspread.authorize(creds)
+            sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet(
+                "請假申請"
+            )
+
+            # 找到對應行
+            row_num = find_row_by_request_id(sheet, request_id)
+            if not row_num:
+                print(f"找不到 request_id: {request_id}")
+                return "", 200
+
+            # 讀取這行的原始資料 (為了把名字、時間重畫在新卡片上)
+            row_data = sheet.row_values(row_num)
+            employee_name = row_data[2] if len(row_data) > 2 else "未知"
+            leave_type = row_data[3] if len(row_data) > 3 else "未知"
+            start_dt = row_data[4] if len(row_data) > 4 else "未知"
+            end_dt = row_data[5] if len(row_data) > 5 else "未知"
+
+            # 更新 status 和 reject_reason (寫入 Google Sheets)
+            sheet.update_cell(
+                row_num, 9, "approved" if action == "approve" else "rejected"
+            )  # I欄
+            sheet.update_cell(row_num, 10, reason)  # J欄
+
+            print(f"審核完成 - {request_id}: {action}")
+
+            # ==========================================
+            # 新增：動態更新原本的卡片 (把按鈕拔掉，換成結果文字)
+            # ==========================================
+            if message_id:
+                if action == "approve":
+                    status_text = "**已核准 (Approve)**"
+                else:
+                    status_text = f"**已拒絕** (原因：{reason})"
+
+                # 建立一張「沒有按鈕」的新卡片
+                updated_card = {
+                    "elements": [
+                        {
+                            "element_type": "title",
+                            "title": {
+                                "text": f"{employee_name}請假審核申請 (已處理)"
+                            }
+                        },
+                        {
+                            "element_type": "description",
+                            "description": {
+                                "format": 1,
+                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n\n**審核結果**：{status_text}"
+                            }
+                        }
+                    ]
+                }
+
+                access_token = get_access_token()
+                
+                # 🔴 依照官方文件，"message" 裡面直接放 "interactive_message"
+                update_payload = {
+                    "message_id": message_id,
+                    "message": {
+                        "interactive_message": updated_card
+                    }
+                }
+                
+                # 🔴 改用 POST，並指向 /v2/update 網址
+                res = requests.post(
+                    "https://openapi.seatalk.io/messaging/v2/update",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json"
+                    },
+                    json=update_payload
+                )
+                print(f"Update card response: {res.json()}")
+
+            return "", 200
+
+        # 以下維持原本邏輯不動
+        elif event_type == NEW_BOT_SUBSCRIBER:
+            print("New bot subscriber event received.")
+            pass
+
+        elif event_type == MESSAGE_FROM_BOT_SUBSCRIBER:
+            print("Message from bot subscriber event received.")
+            pass
+
+        elif event_type == BOT_ADDED_TO_GROUP_CHAT:
+            print("Bot added to group chat event received.")
+            pass
+
+        elif event_type == BOT_REMOVED_FROM_GROUP_CHAT:
+            print("Bot removed from group chat event received.")
+            pass
+
+        elif event_type == NEW_MENTIONED_MESSAGE_RECEIVED_FROM_GROUP_CHAT:
+            # Handle new mentioned message in group chat.
+            # Example: Process the mention and respond to the user.
+            group_id = data["event"]["group_id"]
+            plain_text = data["event"]["message"]["text"]["plain_text"]
+            thread_id = data["event"]["message"]["message_id"]
+            print("New mentioned message in group chat received.")
+            print(f"收到的CallBack內容:\n{data}")
+
+            # 檢查訊息是否以 "@X10A" 開頭，並移除可能的換行或空格
+            if plain_text.strip().startswith("(Production)"):
+                # 使用 \n 分割字串，並過濾出指定開頭的行
+                lines = [
+                    line.strip()
+                    for line in plain_text.split("\n")
+                    if line.strip().startswith(("Order SN", "出貨失敗 TN"))
+                ]
+
+                data_dict = {}
+                for line in lines:
+                    if line.startswith("Order SN"):
+                        data_dict["OSN"] = line.split("：", 1)[1]  # 取冒號後面的部分
+                    elif line.startswith("出貨失敗 TN"):
+                        data_dict["TN"] = line.split("：", 1)[1]
+
+                new_data = [data_dict]
+                add_err_order(new_data)
+
+                # group_id = "NzMwNTUzMTAzMzg3"
+                bot_reply("販賣機Err清單已更新成功", group_id, thread_id)
+
+            elif plain_text.strip().startswith("Hi Team"):
+                lines = [
+                    line.strip()
+                    for line in plain_text.split("\n")
+                    if line.strip().startswith(
+                        (
+                            "Seller Type",
+                            "Return Status",
+                            "Return Reason",
+                            "Seller Username",
+                        )
+                    )
+                ]
+
+                data_dict = {}
+
+                for line in lines:
+                    if line.startswith("Seller Type"):
+                        data_dict["Seller Type"] = line.split("：", 1)[
+                            1
+                        ]  # 取冒號後面的部分
+
+                    elif line.startswith("Return Status"):
+                        normalized_line = line.replace("：", ":").strip()
+                        data_dict["Return Status"] = normalized_line.split(":", 1)[
+                            1
+                        ].strip()
+
+                    elif line.startswith("Return Reason"):
+                        normalized_line = line.replace("：", ":").strip()
+                        data_dict["Return Reason"] = normalized_line.split(":", 1)[
+                            1
+                        ].strip()
+
+                    elif line.startswith("Seller Username"):
+                        normalized_line = line.replace("：", ":").strip()
+                        data_dict["Seller Username"] = normalized_line.split(":", 1)[
+                            1
+                        ].strip()
+
+                special_seller_list = [
+                    "fe_amart",
+                    "digitalcitytw",
+                    "senao.tw",
+                    "daikin_senao",
+                    "samsung_he",
+                    "sakuyo_Japan",
+                    "bianco_senao",
+                    "MegaKing_senao",
+                    "panasonic_senao",
+                    "shopee_pass",
+                    "esim_go",
+                    "shopee24h",
+                    "shopee24h_hb",
+                    "shopee24h_el",
+                    "asus_official_store",
+                    "outsourcing_24h",
+                    "thebestofkaohsiung",
+                    "foodie.select",
+                    "game_official",
+                    "game_quick",
+                    "google.tw",
+                    "oppo_official",
+                    "realmetw",
+                    "shopee_consumables",
+                    "sp_games",
+                    "ticket_service",
+                    "topbrandtw",
+                    "shopee_choice_hl",
+                    "apple.tw",
+                    "asiawifi",
+                ]
+                flow = ""  # 初始化flow變數
+                mention_tag = ""  # 初始化mention_tag變數
+
+                print(f"解析後的資料字典: {data_dict}")
+                if "Requested" in data_dict.get("Return Status", "").strip():
+
+                    mention_tag = '<mention-tag target="seatalk://user?email=ziv.hung@shopee.com"/><mention-tag target="seatalk://user?email=sharon.chuic@shopee.com"/>'
+                    content = f"{mention_tag}\n此案件需協助推送到Judging，請PIC協助確認案件內容!"
+                    bot_reply(content, group_id, thread_id)
+
+                elif (
+                    "Judging" in data_dict.get("Return Status", "").strip()
+                    or "Processing" in data_dict.get("Return Status", "").strip()
+                ):
+                    if (
+                        data_dict.get("Seller Username", "").strip()
+                        in special_seller_list
+                    ):
+                        flow = "Mall 特賣"
+                        mention_tag = '<mention-tag target="seatalk://user?email=lynne.chung@shopee.com"/><mention-tag target="seatalk://user?email=vivian.liu@shopee.com"/>'
+                        content = (
+                            f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                        )
+                        bot_reply(content, group_id, thread_id)
+
+                    else:
+                        reason = data_dict.get("Return Reason", "").strip()
+                        if "包裹未送達／無法取件" in reason:
+                            flow = "Flow A"
+                            mention_tag = '<mention-tag target="seatalk://user?email=vivian.liu@shopee.com"/><mention-tag target="seatalk://user?email=lynne.chung@shopee.com"/>'
+                            content = (
+                                f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                            )
+                            bot_reply(content, group_id, thread_id)
+
+                        elif "商品缺件／賣家通知缺貨" in reason:
+                            flow = "Flow B"
+                            mention_tag = '<mention-tag target="seatalk://user?email=tina.tang@shopee.com"/><mention-tag target="seatalk://user?email=jennifer.su@shopee.com"/>'
+                            content = (
+                                f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                            )
+                            bot_reply(content, group_id, thread_id)
+                        else:
+                            flow = "Flow C"
+                            mention_tag = '<mention-tag target="seatalk://user?email=sharon.chuic@shopee.com"/><mention-tag target="seatalk://user?email=ziv.hung@shopee.com"/>'
+                            content = (
+                                f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                            )
+                            bot_reply(content, group_id, thread_id)
+
+                elif (
+                    "Accepted" in data_dict.get("Return Status", "").strip()
+                    or "Seller dispute" in data_dict.get("Return Status", "").strip()
+                    or "Seller Dispute" in data_dict.get("Return Status", "").strip()
+                ):
+
+                    if "C2C" in data_dict.get("Seller Type", "").strip():
+                        flow = "C2C Dispute"
+                        mention_tag = '<mention-tag target="seatalk://user?email=alice.cheng@shopee.com"/><mention-tag target="seatalk://user?email=janice.lin@shopee.com"/>'
+                        content = (
+                            f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                        )
+                        bot_reply(content, group_id, thread_id)
+
+                    elif "Mall" in data_dict.get("Seller Type", "").strip():
+                        flow = "Mall Dispute"
+                        mention_tag = '<mention-tag target="seatalk://user?email=shin.lee@shopee.com"/>'
+                        # 移除Amelie，待後續加上
+                        content = (
+                            f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                        )
+                        bot_reply(content, group_id, thread_id)
+
+                    elif "CB" in data_dict.get("Seller Type", "").strip():
+                        flow = "CB Dispute"
+                        mention_tag = '<mention-tag target="seatalk://user?email=queenie.chien@shopee.com"/><mention-tag target="seatalk://user?email=winnie.hsu@shopee.com"/>'
+                        content = (
+                            f"{mention_tag}\n此為{flow}案件，請PIC協助確認案件內容!"
+                        )
+                        bot_reply(content, group_id, thread_id)
+
+                else:
+                    content = f"Return Status內容有誤，無法判定通知對象，請重新確認格式"
+                    bot_reply(content, group_id, thread_id)
+
+            else:
+
+                content = "訊息內容未以指定關鍵字開頭，請重新確認格式"
+                bot_reply(content, group_id, thread_id)
+
+        else:
+            print(f"Unknown event type: {event_type}")
+
+    except json.JSONDecodeError:
+        return "Invalid JSON in request body", 400
+
+    return "", 200
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
