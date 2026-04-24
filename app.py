@@ -13,7 +13,7 @@ from authlib.integrations.flask_client import OAuth
 from flask import session, redirect, url_for, request as flask_request
 
 # settings
-SIGNING_SECRET = os.environ.get("SEATALK_SIGNING_SECRET", "").encode()
+SIGNING_SECRET = b"2UA_j2iaGlfSkWrXOzKzWj9wfDzIPHtr"
 
 # event list
 EVENT_VERIFICATION = "event_verification"
