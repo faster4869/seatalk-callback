@@ -90,7 +90,7 @@ def get_employee_code(email: str, access_token: str) -> str:
 def build_leave_card(leave_data: dict) -> dict:
     return {
         "elements": [
-            {"element_type": "title", "title": {"text": "📋 請假審核申請"}},
+            {"element_type": "title", "title": {"text": f"{leave_data['employee_name']}請假審核申請"}},
             {
                 "element_type": "description",
                 "description": {
@@ -102,7 +102,7 @@ def build_leave_card(leave_data: dict) -> dict:
                 "element_type": "button",
                 "button": {
                     "button_type": "callback",
-                    "text": "✅ Approve",
+                    "text": "審核通過",
                     "value": json.dumps(
                         {
                             "action": "approve",
@@ -116,7 +116,7 @@ def build_leave_card(leave_data: dict) -> dict:
                 "element_type": "button",
                 "button": {
                     "button_type": "callback",
-                    "text": "❌ 資料錯誤",
+                    "text": "資料錯誤",
                     "value": json.dumps(
                         {
                             "action": "reject",
@@ -130,11 +130,11 @@ def build_leave_card(leave_data: dict) -> dict:
                 "element_type": "button",
                 "button": {
                     "button_type": "callback",
-                    "text": "🚫 禁止休假",
+                    "text": "禁休日",
                     "value": json.dumps(
                         {
                             "action": "reject",
-                            "reason": "禁止休假",
+                            "reason": "禁止休假日",
                             "request_id": leave_data["request_id"],
                         }
                     ),
@@ -276,6 +276,7 @@ def leave_list():
 # 新 Route：接收請假申請
 # =====================
 @app.route("/leave/apply/test", methods=["POST"])
+
 def leave_apply_test():
     try:
         leave_data = {
@@ -508,9 +509,9 @@ def bot_callback_handler():
             # ==========================================
             if message_id:
                 if action == "approve":
-                    status_text = "✅ **已核准 (Approve)**"
+                    status_text = "**已核准 (Approve)**"
                 else:
-                    status_text = f"❌ **已拒絕** (原因：{reason})"
+                    status_text = f"**已拒絕** (原因：{reason})"
 
                 # 建立一張「沒有按鈕」的新卡片
                 updated_card = {
@@ -518,14 +519,14 @@ def bot_callback_handler():
                         {
                             "element_type": "title",
                             "title": {
-                                "text": "📋 請假審核申請 (已處理)"
+                                "text": f"{employee_name}請假審核申請 (已處理)"
                             }
                         },
                         {
                             "element_type": "description",
                             "description": {
                                 "format": 1,
-                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n➖➖➖➖➖➖\n**審核結果**：{status_text}"
+                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n\n**審核結果**：{status_text}"
                             }
                         }
                     ]
