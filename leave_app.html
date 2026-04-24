@@ -7,33 +7,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
+    /* 告訴瀏覽器這個網頁支援雙色模式，讓日曆圖示、下拉選單、捲軸自動變色 */
+    color-scheme: light dark;
 
+    /* 預設（淺色模式）的變數 */
     --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface2: #f1f5f9;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --text2: #64748b;
-      --text3: #94a3b8;
-      --accent: #f97316;
-      --success: #10b981;
-      --danger: #ef4444;
-      --pending: #f59e0b;
+    --surface: #ffffff;
+    --surface2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text2: #64748b;
+    --text3: #94a3b8;
+    --accent: #f97316;
+    --success: #10b981;
+    --danger: #ef4444;
+    --pending: #f59e0b;
+  }
 
-    /*
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #242424;
-    --border: #2e2e2e;
-    --accent: #ff6b35;
-    --accent2: #ffb347;
-    --text: #f0f0f0;
-    --text2: #888;
-    --text3: #555;
-    --success: #4caf7d;
-    --danger: #e05252;
-    --pending: #f0a500;
-    */
+  /* 當使用者的裝置設定為「深色模式」時，自動啟動這組配色來覆寫上方變數 */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #555;
+      --accent: #ff6b35;
+      --success: #4caf7d;
+      --danger: #e05252;
+      --pending: #f0a500;
+    }
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -88,7 +93,7 @@
   .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; animation: fadeUp 0.6s ease 0.2s both; }
   .form-group { margin-bottom: 20px; }
   .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
-  .form-control { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans TC', sans-serif; transition: border-color 0.2s; outline: none; appearance: none; color-scheme: dark; }
+  .form-control { width: 100%; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans TC', sans-serif; transition: border-color 0.2s; outline: none; appearance: none; }
   .form-control:focus { border-color: var(--accent); }
   .form-control option { background: var(--surface2); }
 
