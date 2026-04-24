@@ -480,7 +480,7 @@ def leave_apply():
         )
 
         # 發卡片給主管
-        # send_leave_request_card(manager_employee_code, leave_data)
+        send_leave_request_card(manager_employee_code, leave_data)
 
         return jsonify({"status": "ok", "request_id": request_id}), 200
 
