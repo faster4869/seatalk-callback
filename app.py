@@ -4,10 +4,12 @@ import json
 import firebase_admin
 from firebase_admin import credentials, db
 from typing import Dict, Any, List
+import jwt
 import os
 import time
 from flask import Flask, request, jsonify
 import gspread
+from datetime import datetime, timedelta, timezone
 from google.oauth2.service_account import Credentials
 from authlib.integrations.flask_client import OAuth
 from flask import session, redirect, url_for, request as flask_request
@@ -233,9 +235,22 @@ def auth_callback():
     email = user.get("email")
     name = user.get("name", email.split("@")[0])
 
-    # 導回前端，帶上 email 和 name
-    frontend_url = os.environ.get("FRONTEND_URL", "/")
-    return redirect(f"{frontend_url}?email={email}&name={name}")
+    # 1. 準備要打包的資料 (Payload)
+    # exp 是一個標準欄位，代表過期時間，這裡設定為 24 小時後過期
+    payload = {
+        "email": email,
+        "name": name,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24) 
+    }
+
+    # 2. 使用你的金鑰，把資料加密簽名成 Token
+    token = jwt.encode(payload, SIGNING_SECRET, algorithm="HS256")
+
+    # 4. 導回前端，現在改帶 token
+    frontend_url = os.environ.get("FRONTEND_URL", "/leave")
+
+    # 最終導向會變成：https://seatalk-callback.onrender.com/leave?token=xxxx...
+    return redirect(f"{frontend_url}?token={token}")
 
 
 @app.route("/leave")
@@ -247,10 +262,33 @@ def leave_page():
 # ── 查詢申請記錄 ──────────────────────────────────────
 @app.route("/leave/list", methods=["GET"])
 def leave_list():
+    # 1. 從前端送來的 Header 中抓取 Authorization 欄位
+    auth_header = flask_request.headers.get('Authorization')
+    
+    # 確保格式正確
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"status": "error", "message": "未授權，缺少 Token"}), 401
+
+    # 切割字串，只拿出 Token 本體
+    token = auth_header.split(" ")[1]
+
     try:
-        email = flask_request.args.get("email")
-        if not email:
-            return jsonify({"status": "error", "message": "缺少 email"}), 400
+        # 2. 嘗試解密 Token
+        decoded_data = jwt.decode(token, SIGNING_SECRET, algorithms=["HS256"])
+        
+        # 3. 解密成功，取得絕對可信的 email
+        verified_email = decoded_data['email']
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"status": "error", "message": "登入狀態已過期，請重新登入"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"status": "error", "message": "無效的驗證碼，請勿竄改"}), 401
+
+    # =====================================================================
+    # Token 驗證通過後，才執行資料庫查詢
+    # =====================================================================
+    try:
+        # 你原本可以把 email = ... 這行刪掉了，因為我們不再信任網址傳來的參數
 
         service_account_info = json.loads(
             os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
@@ -263,7 +301,9 @@ def leave_list():
         sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("請假申請")
 
         records = sheet.get_all_records()
-        user_records = [r for r in records if r.get("employee_email") == email]
+        
+        # 【極度重要】：過濾時，強制使用 Token 解密出來的 verified_email
+        user_records = [r for r in records if r.get("employee_email") == verified_email]
 
         return jsonify({"status": "ok", "records": user_records}), 200
 
@@ -349,9 +389,35 @@ def leave_apply_test():
 
 @app.route("/leave/apply", methods=["POST"])
 def leave_apply():
+    # 1. 從前端送來的 Header 中抓取 Authorization 欄位
+    auth_header = request.headers.get('Authorization')
+    
+    # 確保格式正確
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"status": "error", "message": "未授權，缺少 Token"}), 401
+
+    # 切割字串，只拿出 Token 本體
+    token = auth_header.split(" ")[1]
+
+    try:
+        # 2. 嘗試用同一把金鑰解密 Token
+        decoded_data = jwt.decode(token, SIGNING_SECRET, algorithms=["HS256"])
+        
+        # 3. 恭喜！解密成功，提取出絕對可信的身分資料
+        verified_email = decoded_data['email']
+        verified_name = decoded_data['name']
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"status": "error", "message": "登入狀態已過期，請重新登入"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"status": "error", "message": "無效的驗證碼，請勿竄改"}), 401
+
+    # =====================================================================
+    # 注意這裡的縮排！必須跟上面的 try/except 齊平，代表 Token 驗證通過後才執行
+    # =====================================================================
     try:
         data = request.get_json()
-        print(f"收到請假申請: {data}")
+        print(f"收到請假申請 (申請人: {verified_email}): {data}")
 
         # 用 AppSheet 傳來的 request_id，沒有的話才自己產生
         request_id = data.get("request_id") or f"LEAVE_{int(time.time())}"
@@ -366,26 +432,25 @@ def leave_apply():
         )
         gc = gspread.authorize(creds)
 
-        # 查主管對應表
-        map_sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet(
-            "主管對應表"
-        )
+        # 查主管對應表 【修正：改用 verified_email 查詢】
+        map_sheet = gc.open_by_key(os.environ.get("LEAVE_SHEET_ID")).worksheet("主管對應表")
         records = map_sheet.get_all_records()
         manager_data = next(
-            (r for r in records if r["employee_email"] == data["employee_email"]), None
+            (r for r in records if r["employee_email"] == verified_email), None
         )
 
         if not manager_data:
-            print(f"找不到對應主管: {data['employee_email']}")
+            print(f"找不到對應主管: {verified_email}")
             return jsonify({"status": "error", "message": "找不到對應主管"}), 400
 
         manager_email = manager_data["manager_email"]
         manager_employee_code = str(manager_data["manager_employee_code"])
 
+        # 準備寫入資料 【修正：強制寫入 verified_email 與 verified_name】
         leave_data = {
             "request_id": request_id,
-            "employee_email": data["employee_email"],
-            "employee_name": data["employee_name"],
+            "employee_email": verified_email,  # <--- 絕對安全的來源
+            "employee_name": verified_name,    # <--- 絕對安全的來源
             "leave_type": data["leave_type"],
             "start_datetime": data["start_datetime"],
             "end_datetime": data["end_datetime"],
@@ -415,7 +480,7 @@ def leave_apply():
         )
 
         # 發卡片給主管
-        send_leave_request_card(manager_employee_code, leave_data)
+        # send_leave_request_card(manager_employee_code, leave_data)
 
         return jsonify({"status": "ok", "request_id": request_id}), 200
 
