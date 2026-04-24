@@ -392,9 +392,10 @@
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
     
-    // 如果網址有 token，存起來並清除網址列參數（避免 token 外洩）
+    // 如果網址上有 token，存進記憶體並「立刻抹除」網址列的參數
     if (urlToken) {
       localStorage.setItem('auth_token', urlToken);
+      // 這行就是你最需要的：把網址列變乾淨，防止分享時洩漏資訊
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -402,17 +403,19 @@
 
     if (token) {
       try {
-        // 簡單解析 JWT 拿取裡面的 email 與 name 顯示在畫面上 (JWT 的 payload 在第二段)
-        const payload = JSON.parse(atob(token.split('.')[1])); 
+        // 解析 JWT Payload (Token 的第二段) 來取得 email
+        // base64 解碼後轉為 JSON 物件
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        
         currentUser = { 
           email: payload.email, 
           name: payload.name || payload.email.split('@')[0],
-          token: token 
+          token: token // 存起來，之後送出申請時要放在 Header 裡
         };
         showApp();
       } catch (e) {
-        // 如果 token 格式錯誤，清除並要求重新登入
-        logout();
+        console.error("Token 解析失敗", e);
+        showLogin();
       }
     } else {
       showLogin();
@@ -509,7 +512,13 @@
     list.innerHTML = '<div class="empty-state"><div class="empty-text">載入中...</div></div>';
 
     try {
-      const res = await fetch(`${API_BASE}/leave/list?email=${encodeURIComponent(currentUser.email)}`);
+      // 網址不再需要帶 ?email=... 參數了，因為後端自己會從 Token 拆出來
+      const res = await fetch(`${API_BASE}/leave/list`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}` // 將 Token 夾在標頭送出
+        }
+      });
       const data = await res.json();
 
       if (!data.records || data.records.length === 0) {
