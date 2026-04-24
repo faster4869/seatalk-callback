@@ -387,16 +387,33 @@
       showLogin();
     }
   }
+  // ── Google OAuth ──────────────────────────────────────
   function checkAuth() {
     const params = new URLSearchParams(window.location.search);
-    const email = params.get('email') || localStorage.getItem('user_email');
-    const name = params.get('name') || localStorage.getItem('user_name');
+    const urlToken = params.get('token');
+    
+    // 如果網址有 token，存起來並清除網址列參數（避免 token 外洩）
+    if (urlToken) {
+      localStorage.setItem('auth_token', urlToken);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-    if (email) {
-      localStorage.setItem('user_email', email);
-      if (name) localStorage.setItem('user_name', name);
-      currentUser = { email, name: name || email.split('@')[0] };
-      showApp();
+    const token = localStorage.getItem('auth_token');
+
+    if (token) {
+      try {
+        // 簡單解析 JWT 拿取裡面的 email 與 name 顯示在畫面上 (JWT 的 payload 在第二段)
+        const payload = JSON.parse(atob(token.split('.')[1])); 
+        currentUser = { 
+          email: payload.email, 
+          name: payload.name || payload.email.split('@')[0],
+          token: token 
+        };
+        showApp();
+      } catch (e) {
+        // 如果 token 格式錯誤，清除並要求重新登入
+        logout();
+      }
     } else {
       showLogin();
     }
@@ -455,14 +472,17 @@
     try {
       const res = await fetch(`${API_BASE}/leave/apply`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          // 加入這行：把 Token 送給後端驗證身分
+          'Authorization': `Bearer ${currentUser.token}` 
+        },
         body: JSON.stringify({
-          employee_email: currentUser.email,
-          employee_name: currentUser.name,
+          // 前端還是可以傳送資料，但後端不能信任這個，必須以 Token 解密出來的 Email 為準
           leave_type: leaveType,
           start_datetime: startDatetime,
           end_datetime: endDatetime,
-          reason
+          reason: reason
         })
       });
 
