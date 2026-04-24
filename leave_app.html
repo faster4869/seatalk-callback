@@ -196,8 +196,8 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('apply')">📝 送出申請</button>
-    <button class="tab" onclick="switchTab('status')">📊 申請狀態</button>
+    <button class="tab active" onclick="switchTab('apply')">請假申請</button>
+    <button class="tab" onclick="switchTab('status')">審核結果</button>
   </div>
 
   <div class="tab-content active" id="tab-apply">
@@ -212,7 +212,6 @@
           <option value="生理假">生理假</option>
           <option value="婚假">婚假</option>
           <option value="喪假">喪假</option>
-          <option value="加班">加班</option>
         </select>
       </div>
 
@@ -261,7 +260,7 @@
 
       <div class="form-group">
         <label class="form-label">原因/說明</label>
-        <textarea class="form-control" id="reason" placeholder="請簡述請假原因，若為申請加班請務必說明touch/judge案件數量..."></textarea>
+        <textarea class="form-control" id="reason" placeholder="請簡述請假原因..."></textarea>
       </div>
 
       <button class="submit-btn" id="submitBtn" onclick="submitLeave()">
@@ -426,8 +425,8 @@
       return;
     }
 
-    const startDatetime = `${startDate} ${startHour}:${startMinute}:00`;
-    const endDatetime = `${endDate} ${endHour}:${endMinute}:00`;
+    const startDatetime = `${startDate} ${startHour}:${startMinute}`;
+    const endDatetime = `${endDate} ${endHour}:${endMinute}`;
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
