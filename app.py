@@ -409,6 +409,7 @@ def leave_apply():
 
     except jwt.ExpiredSignatureError:
         return jsonify({"status": "error", "message": "登入狀態已過期，請重新登入"}), 401
+    
     except jwt.InvalidTokenError:
         return jsonify({"status": "error", "message": "無效的驗證碼，請勿竄改"}), 401
 
@@ -567,7 +568,7 @@ def bot_callback_handler():
 
             # 更新 status 和 reject_reason (寫入 Google Sheets)
             sheet.update_cell(
-                row_num, 9, "approved" if action == "approve" else "rejected"
+                row_num, 10, "approved" if action == "approve" else "rejected"
             )  # I欄
             sheet.update_cell(row_num, 11, reason)  # J欄
 
