@@ -445,10 +445,12 @@ def leave_apply():
 
         manager_email = manager_data["manager_email"]
         manager_employee_code = str(manager_data["manager_employee_code"])
+        department = manager_data.get("department", "未知部門")
 
         # 準備寫入資料 【修正：強制寫入 verified_email 與 verified_name】
         leave_data = {
             "request_id": request_id,
+            "employee_department": department,  # <--- 絕對安全的來源
             "employee_email": verified_email,  # <--- 絕對安全的來源
             "employee_name": verified_name,    # <--- 絕對安全的來源
             "leave_type": data["leave_type"],
@@ -466,6 +468,7 @@ def leave_apply():
         sheet.append_row(
             [
                 leave_data["request_id"],
+                leave_data["employee_department"],
                 leave_data["employee_email"],
                 leave_data["employee_name"],
                 leave_data["leave_type"],
