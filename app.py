@@ -288,7 +288,7 @@ def leave_list():
     # Token 驗證通過後，才執行資料庫查詢
     # =====================================================================
     try:
-        # 你原本可以把 email = ... 這行刪掉了，因為我們不再信任網址傳來的參數
+        
 
         service_account_info = json.loads(
             os.environ.get("GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON")
@@ -569,7 +569,7 @@ def bot_callback_handler():
             sheet.update_cell(
                 row_num, 9, "approved" if action == "approve" else "rejected"
             )  # I欄
-            sheet.update_cell(row_num, 10, reason)  # J欄
+            sheet.update_cell(row_num, 11, reason)  # J欄
 
             print(f"審核完成 - {request_id}: {action}")
 
