@@ -97,7 +97,7 @@ def build_leave_card(leave_data: dict) -> dict:
                 "element_type": "description",
                 "description": {
                     "format": 1,
-                    "text": f"**員工**：{leave_data['employee_name']}\n**假別**：{leave_data['leave_type']}\n**開始時間**：{leave_data['start_datetime']}\n**結束時間**：{leave_data['end_datetime']}\n**原因**：{leave_data['reason']}",
+                    "text": f"**部門**：{leave_data['employee_department']}\n**員工**：{leave_data['employee_name']}\n**假別**：{leave_data['leave_type']}\n**開始時間**：{leave_data['start_datetime']}\n**結束時間**：{leave_data['end_datetime']}\n**原因**：{leave_data['reason']}",
                 },
             },
             {
@@ -559,10 +559,11 @@ def bot_callback_handler():
 
             # 讀取這行的原始資料 (為了把名字、時間重畫在新卡片上)
             row_data = sheet.row_values(row_num)
-            employee_name = row_data[2] if len(row_data) > 2 else "未知"
-            leave_type = row_data[3] if len(row_data) > 3 else "未知"
-            start_dt = row_data[4] if len(row_data) > 4 else "未知"
-            end_dt = row_data[5] if len(row_data) > 5 else "未知"
+            employee_department = row_data[1] if len(row_data) > 1 else "未知"
+            employee_name = row_data[3] if len(row_data) > 3 else "未知"
+            leave_type = row_data[4] if len(row_data) > 4 else "未知"
+            start_dt = row_data[5] if len(row_data) > 5 else "未知"
+            end_dt = row_data[6] if len(row_data) > 6 else "未知"
 
             # 更新 status 和 reject_reason (寫入 Google Sheets)
             sheet.update_cell(
@@ -594,7 +595,7 @@ def bot_callback_handler():
                             "element_type": "description",
                             "description": {
                                 "format": 1,
-                                "text": f"**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n\n**審核結果**：{status_text}"
+                                "text": f"**部門**：{employee_department}\n**員工**：{employee_name}\n**假別**：{leave_type}\n**開始時間**：{start_dt}\n**結束時間**：{end_dt}\n\n**審核結果**：{status_text}"
                             }
                         }
                     ]
