@@ -642,6 +642,7 @@ def bot_callback_handler():
             # Handle new mentioned message in group chat.
             # Example: Process the mention and respond to the user.
             group_id = data["event"]["group_id"]
+            print(f"⭐⭐⭐ 抓到 group_id 了！這個群組的 ID 是: {group_id} ⭐⭐⭐")
             plain_text = data["event"]["message"]["text"]["plain_text"]
             thread_id = data["event"]["message"]["message_id"]
             print("New mentioned message in group chat received.")
