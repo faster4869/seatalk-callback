@@ -147,21 +147,32 @@ def build_leave_card(leave_data: dict) -> dict:
 
 
 def send_leave_request_card(leave_data: dict):
-    """發送請假審核互動卡片給群組(Webhook)"""
+    """發送請假審核互動卡片到指定群組 (透過 Bot API，支援按鈕點擊)"""
     
-    # 針對 Webhook 的正確 Payload 格式 (不需要 "message" 包裝)
+    # 1. 取得 Bot 的 Access Token
+    access_token = get_access_token()
+    
+    # 2. 填入你剛剛抓到的群組 ID
+    TARGET_GROUP_ID = "NzMwNTUzMTAzMzg3"
+
+    # 3. 依照官方文件，針對 群組 Bot API (/v2/group_chat) 的 Payload 格式
     payload = {
-        "tag": "interactive_message",
-        "interactive_message": build_leave_card(leave_data)
+        "group_id": TARGET_GROUP_ID,
+        "message": {
+            "tag": "interactive_message",
+            "interactive_message": build_leave_card(leave_data),
+        }
     }
 
-    web_hook_url = "https://openapi.seatalk.io/webhook/group/EXkmJWBHSW-nixckBLQVzw"
+    # 4. 改用 Bot 群組發送網址
+    url = "https://openapi.seatalk.io/messaging/v2/group_chat"
 
+    # 5. 發送 Request (必須帶 Authorization Header)
     response = requests.post(
-        web_hook_url,
+        url,
         headers={
+            "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
-            # Webhook 不需要 Authorization Header
         },
         json=payload,
     )
