@@ -424,11 +424,12 @@
         <label class="form-label">請假時數</label>
         <div id="durationDisplay" class="duration-value">0 hrs</div>
       </div>
-
+       <!--
       <div class="form-group">
         <label class="form-label">原因/說明</label>
         <textarea class="form-control" id="reason" placeholder="請簡述請假原因..."></textarea>
       </div>
+      -->
 
       <button class="submit-btn" id="submitBtn" onclick="submitLeave()">送出申請</button>
     </div>
@@ -586,7 +587,8 @@
     const endDate = document.getElementById('endDate').value;
     const endHour = document.getElementById('endHour').value;
     const endMinute = document.getElementById('endMinute').value;
-    const reason = document.getElementById('reason').value;
+    //const reason = document.getElementById('reason').value;
+    const reason = "無"
     const durationText = document.getElementById("durationDisplay").innerText;
 
     if (!leaveType || !startDate || !endDate || !reason) {
