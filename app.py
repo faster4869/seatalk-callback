@@ -147,27 +147,21 @@ def build_leave_card(leave_data: dict) -> dict:
 
 
 def send_leave_request_card(leave_data: dict):
-    """發送請假審核互動卡片給主管"""
-    access_token = get_access_token()
-    #print(f"sending payload to_employee_code={manager_employee_code}")
-
-    # 使用 Seatalk v2 正確的 Payload 格式
+    """發送請假審核互動卡片給群組(Webhook)"""
+    
+    # 針對 Webhook 的正確 Payload 格式 (不需要 "message" 包裝)
     payload = {
-        #"employee_code": manager_employee_code,
-        "message": {
-            "tag": "interactive_message",
-            "interactive_message": build_leave_card(leave_data),
-        },
+        "tag": "interactive_message",
+        "interactive_message": build_leave_card(leave_data)
     }
 
-    # 使用正確的 v2 網址 (拿掉 /bot/send_)
     web_hook_url = "https://openapi.seatalk.io/webhook/group/EXkmJWBHSW-nixckBLQVzw"
 
     response = requests.post(
         web_hook_url,
         headers={
-            #"Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
+            # Webhook 不需要 Authorization Header
         },
         json=payload,
     )
