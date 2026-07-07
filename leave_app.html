@@ -627,7 +627,7 @@
       if (data.status === 'ok') {
         showToast('申請送出成功！等待主管審核', 'success');
         document.getElementById('leaveType').value = '';
-        document.getElementById('reason').value = '';
+        //document.getElementById('reason').value = '';
         setDefaultDates();
       } else {
         showToast(data.message || '送出失敗，請稍後再試', 'error');
