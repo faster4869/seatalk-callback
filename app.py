@@ -146,14 +146,14 @@ def build_leave_card(leave_data: dict) -> dict:
     }
 
 
-def send_leave_request_card(leave_data: dict):
+def send_leave_request_card(group_id,leave_data: dict):
     """發送請假審核互動卡片到指定群組 (透過 Bot API，支援按鈕點擊)"""
     
     # 1. 取得 Bot 的 Access Token
     access_token = get_access_token()
     
     # 2. 填入你剛剛抓到的群組 ID
-    TARGET_GROUP_ID = "NzMwNTUzMTAzMzg3"
+    TARGET_GROUP_ID = group_id
 
     # 3. 依照官方文件，針對 群組 Bot API (/v2/group_chat) 的 Payload 格式
     payload = {
@@ -452,7 +452,8 @@ def leave_apply():
             return jsonify({"status": "error", "message": "找不到對應主管"}), 400
 
         manager_email = manager_data["manager_email"]
-        manager_employee_code = str(manager_data["manager_employee_code"])
+        group_id = manager_data["group_id"]
+        #manager_employee_code = str(manager_data["manager_employee_code"])
         department = manager_data.get("department", "未知部門")
 
         # 準備寫入資料 【修正：強制寫入 verified_email 與 verified_name】
@@ -491,7 +492,7 @@ def leave_apply():
         )
 
         # 發卡片給主管
-        send_leave_request_card(leave_data)
+        send_leave_request_card(group_id,leave_data)
 
         return jsonify({"status": "ok", "request_id": request_id}), 200
 
